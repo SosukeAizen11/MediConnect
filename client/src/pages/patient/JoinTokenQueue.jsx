@@ -147,7 +147,7 @@ function JoinTokenQueue() {
             )}
 
             {/* Join Queue Card */}
-            <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-6 border border-orange-200 shadow-sm">
+            <div className="bg-linear-to-br from-orange-50 to-amber-50 rounded-xl p-6 border border-orange-200 shadow-sm">
                 <div className="flex items-center gap-3 mb-4">
                     <Ticket className="w-6 h-6 text-orange-600" />
                     <h2 className="text-lg font-semibold text-gray-800">Token Queue</h2>
@@ -159,7 +159,7 @@ function JoinTokenQueue() {
 
                 {error && (
                     <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                        <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
                         <p className="text-sm text-red-700">{error}</p>
                     </div>
                 )}

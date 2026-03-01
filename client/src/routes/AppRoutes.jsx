@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
 import PatientLayout from '../layouts/PatientLayout';
+import DoctorLayout from '../layouts/DoctorLayout';
+import AdminLayout from '../layouts/AdminLayout';
 import Home from '../pages/Home';
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
@@ -19,8 +21,19 @@ import MyToken from '../pages/patient/MyToken';
 import Profile from '../pages/patient/Profile';
 import DoctorFeed from '../pages/patient/DoctorFeed';
 import PatientDashboard from '../pages/dashboards/PatientDashboard';
-import DoctorDashboard from '../pages/dashboards/DoctorDashboard';
+import DoctorDashboard from '../pages/doctor/DoctorDashboard';
+import AppointmentQueue from '../pages/doctor/AppointmentQueue';
+import DoctorProfile from '../pages/doctor/DoctorProfile';
+import TokenQueue from '../pages/doctor/TokenQueue';
+import Consultation from '../pages/doctor/Consultation';
+import TokenConsultation from '../pages/doctor/TokenConsultation';
+import MyPatients from '../pages/doctor/MyPatients';
+import CreatePost from '../pages/doctor/CreatePost';
+import MyPosts from '../pages/doctor/MyPosts';
+import RegisterClinic from '../pages/doctor/RegisterClinic';
 import AdminDashboard from '../pages/dashboards/AdminDashboard';
+import ClinicApprovals from '../pages/admin/ClinicApprovals';
+import AllClinics from '../pages/admin/AllClinics';
 
 const getRedirectPath = (role) => {
     switch (role) {
@@ -74,21 +87,32 @@ function AppRoutes() {
                 </Route>
             </Route>
 
-            {/* Doctor Routes */}
-            <Route element={<MainLayout />}>
-                <Route
-                    element={<ProtectedRoute allowedRoles={['DOCTOR']} />}
-                >
+            {/* Doctor Routes with DoctorLayout */}
+            <Route
+                element={<ProtectedRoute allowedRoles={['DOCTOR']} />}
+            >
+                <Route element={<DoctorLayout />}>
                     <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
+                    <Route path="/doctor/register-clinic" element={<RegisterClinic />} />
+                    <Route path="/doctor/queue" element={<AppointmentQueue />} />
+                    <Route path="/doctor/token-queue" element={<TokenQueue />} />
+                    <Route path="/doctor/consult/:appointmentId" element={<Consultation />} />
+                    <Route path="/doctor/token-consult/:tokenId" element={<TokenConsultation />} />
+                    <Route path="/doctor/patients" element={<MyPatients />} />
+                    <Route path="/doctor/create-post" element={<CreatePost />} />
+                    <Route path="/doctor/posts" element={<MyPosts />} />
+                    <Route path="/doctor/profile" element={<DoctorProfile />} />
                 </Route>
             </Route>
 
-            {/* Admin Routes */}
-            <Route element={<MainLayout />}>
-                <Route
-                    element={<ProtectedRoute allowedRoles={['ADMIN']} />}
-                >
+            {/* Admin Routes with AdminLayout */}
+            <Route
+                element={<ProtectedRoute allowedRoles={['ADMIN']} />}
+            >
+                <Route element={<AdminLayout />}>
                     <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                    <Route path="/admin/approvals" element={<ClinicApprovals />} />
+                    <Route path="/admin/clinics" element={<AllClinics />} />
                 </Route>
             </Route>
 

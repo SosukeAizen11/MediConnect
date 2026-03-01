@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/user.model.js';
+import Doctor from '../models/doctor.model.js';
 import { config } from '../config/env.js';
 
 import mongoose from 'mongoose';
@@ -33,6 +34,11 @@ export const register = async (req, res, next) => {
         });
 
         if (user) {
+            // Auto-create Doctor profile for DOCTOR users
+            if (user.role === 'DOCTOR') {
+                await Doctor.create({ user: user._id });
+            }
+
             res.status(201).json({
                 _id: user._id,
                 name: user.name,
@@ -61,6 +67,14 @@ export const login = async (req, res, next) => {
         const user = await User.findOne({ email });
 
         if (user && (await user.matchPassword(password))) {
+            // Auto-create Doctor profile if missing (for legacy DOCTOR accounts)
+            if (user.role === 'DOCTOR') {
+                const existingProfile = await Doctor.findOne({ user: user._id });
+                if (!existingProfile) {
+                    await Doctor.create({ user: user._id });
+                }
+            }
+
             res.json({
                 _id: user._id,
                 name: user.name,

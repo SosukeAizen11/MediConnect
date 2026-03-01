@@ -77,7 +77,7 @@ function MyToken() {
             {tokenData?.hasActiveToken ? (
                 <>
                     {/* Token Card */}
-                    <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-6 border border-orange-200 shadow-sm">
+                    <div className="bg-linear-to-br from-orange-50 to-amber-50 rounded-xl p-6 border border-orange-200 shadow-sm">
                         {/* Clinic Info */}
                         <div className="flex items-center gap-3 mb-6">
                             <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
@@ -118,8 +118,8 @@ function MyToken() {
                         <div className="flex justify-center mb-6">
                             <span
                                 className={`px-6 py-2 rounded-full text-sm font-semibold ${tokenData.data.status === 'CALLED'
-                                        ? 'bg-green-100 text-green-700 animate-pulse'
-                                        : 'bg-orange-100 text-orange-700'
+                                    ? 'bg-green-100 text-green-700 animate-pulse'
+                                    : 'bg-orange-100 text-orange-700'
                                     }`}
                             >
                                 {tokenData.data.status === 'CALLED'
@@ -153,7 +153,7 @@ function MyToken() {
 
                     {/* Info Note */}
                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
-                        <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                         <p className="text-sm text-blue-700">
                             You'll be notified when your turn approaches. Please stay nearby and be ready
                             when your token number is called.

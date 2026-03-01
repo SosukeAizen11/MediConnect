@@ -1,5 +1,6 @@
 import Token from '../models/token.model.js';
 import Clinic from '../models/clinic.model.js';
+import Doctor from '../models/doctor.model.js';
 
 // Join token queue
 export const joinTokenQueue = async (req, res) => {
@@ -122,14 +123,13 @@ export const getMyToken = async (req, res) => {
             });
         }
 
-        // Get current token being served (lowest WAITING or CALLED token)
+        // Get current token being served
         const currentServingToken = await Token.findOne({
             clinic: token.clinic._id,
             date: today,
             status: 'CALLED',
         }).sort({ tokenNumber: 1 });
 
-        // If no one is being called, get the last completed
         let currentToken = 0;
         if (currentServingToken) {
             currentToken = currentServingToken.tokenNumber;
@@ -165,6 +165,247 @@ export const getMyToken = async (req, res) => {
         });
     } catch (error) {
         console.error('Get my token error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// Doctor: Get token queue for their clinic
+export const getDoctorTokenQueue = async (req, res) => {
+    try {
+        let doctorDoc = await Doctor.findOne({ user: req.user._id });
+        if (!doctorDoc) {
+            doctorDoc = await Doctor.create({ user: req.user._id });
+        }
+
+        if (!doctorDoc.clinic) {
+            return res.status(400).json({
+                message: 'No clinic linked to your profile. Please complete profile setup.',
+            });
+        }
+
+        const clinic = await Clinic.findById(doctorDoc.clinic);
+        if (!clinic) {
+            return res.status(404).json({ message: 'Clinic not found' });
+        }
+
+        if (clinic.clinicType !== 'TOKEN') {
+            return res.status(400).json({
+                message: 'This clinic does not use token system',
+            });
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const currentToken = await Token.findOne({
+            clinic: doctorDoc.clinic,
+            date: today,
+            status: 'CALLED',
+        })
+            .populate('patient', 'name email phone')
+            .sort({ tokenNumber: 1 });
+
+        const waitingTokens = await Token.find({
+            clinic: doctorDoc.clinic,
+            date: today,
+            status: 'WAITING',
+        })
+            .populate('patient', 'name email phone')
+            .sort({ tokenNumber: 1 });
+
+        const completedCount = await Token.countDocuments({
+            clinic: doctorDoc.clinic,
+            date: today,
+            status: 'COMPLETED',
+        });
+
+        res.status(200).json({
+            success: true,
+            data: {
+                clinicName: clinic.name,
+                currentToken: currentToken || null,
+                waitingTokens,
+                waitingCount: waitingTokens.length,
+                completedCount,
+            },
+        });
+    } catch (error) {
+        console.error('Get doctor token queue error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// Doctor: Advance to next token
+export const advanceToken = async (req, res) => {
+    try {
+        let doctorDoc = await Doctor.findOne({ user: req.user._id });
+        if (!doctorDoc) {
+            doctorDoc = await Doctor.create({ user: req.user._id });
+        }
+
+        if (!doctorDoc.clinic) {
+            return res.status(400).json({
+                message: 'No clinic linked to your profile.',
+            });
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Mark current CALLED token as COMPLETED
+        const currentServing = await Token.findOne({
+            clinic: doctorDoc.clinic,
+            date: today,
+            status: 'CALLED',
+        });
+
+        if (currentServing) {
+            currentServing.status = 'COMPLETED';
+            await currentServing.save();
+        }
+
+        // Find next WAITING token and set to CALLED
+        const nextToken = await Token.findOne({
+            clinic: doctorDoc.clinic,
+            date: today,
+            status: 'WAITING',
+        }).sort({ tokenNumber: 1 });
+
+        if (nextToken) {
+            nextToken.status = 'CALLED';
+            await nextToken.save();
+        }
+
+        // Return updated queue
+        const updatedCurrentToken = nextToken
+            ? await Token.findById(nextToken._id).populate('patient', 'name email phone')
+            : null;
+
+        const waitingTokens = await Token.find({
+            clinic: doctorDoc.clinic,
+            date: today,
+            status: 'WAITING',
+        })
+            .populate('patient', 'name email phone')
+            .sort({ tokenNumber: 1 });
+
+        const completedCount = await Token.countDocuments({
+            clinic: doctorDoc.clinic,
+            date: today,
+            status: 'COMPLETED',
+        });
+
+        const clinic = await Clinic.findById(doctorDoc.clinic);
+
+        res.status(200).json({
+            success: true,
+            message: nextToken
+                ? `Now serving Token #${nextToken.tokenNumber}`
+                : 'No more patients in queue',
+            data: {
+                clinicName: clinic?.name || '',
+                currentToken: updatedCurrentToken || null,
+                waitingTokens,
+                waitingCount: waitingTokens.length,
+                completedCount,
+            },
+        });
+    } catch (error) {
+        console.error('Advance token error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// Doctor: Get token details for consultation
+export const getTokenDetails = async (req, res) => {
+    try {
+        const { tokenId } = req.params;
+
+        let doctorDoc = await Doctor.findOne({ user: req.user._id });
+        if (!doctorDoc) {
+            doctorDoc = await Doctor.create({ user: req.user._id });
+        }
+
+        const token = await Token.findById(tokenId)
+            .populate('patient', 'name email phone gender dateOfBirth address emergencyContact')
+            .populate('clinic', 'name address');
+
+        if (!token) {
+            return res.status(404).json({ message: 'Token not found' });
+        }
+
+        // Verify this token belongs to doctor's clinic
+        if (!doctorDoc.clinic || token.clinic._id.toString() !== doctorDoc.clinic.toString()) {
+            return res.status(403).json({ message: 'Not authorized to view this token' });
+        }
+
+        // Get past completed tokens for this patient at this clinic
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const pastTokens = await Token.find({
+            patient: token.patient._id,
+            clinic: token.clinic._id,
+            status: 'COMPLETED',
+            _id: { $ne: tokenId },
+        })
+            .sort({ date: -1 })
+            .limit(10);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                token,
+                pastTokens,
+            },
+        });
+    } catch (error) {
+        console.error('Get token details error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// Doctor: Complete token consultation
+export const completeTokenConsultation = async (req, res) => {
+    try {
+        const { tokenId } = req.params;
+        const { diagnosis, prescription, consultationNotes } = req.body;
+
+        if (!diagnosis) {
+            return res.status(400).json({ message: 'Diagnosis is required' });
+        }
+
+        let doctorDoc = await Doctor.findOne({ user: req.user._id });
+        if (!doctorDoc) {
+            doctorDoc = await Doctor.create({ user: req.user._id });
+        }
+
+        const token = await Token.findById(tokenId);
+        if (!token) {
+            return res.status(404).json({ message: 'Token not found' });
+        }
+
+        if (!doctorDoc.clinic || token.clinic.toString() !== doctorDoc.clinic.toString()) {
+            return res.status(403).json({ message: 'Not authorized to update this token' });
+        }
+
+        if (token.status !== 'CALLED') {
+            return res.status(400).json({ message: 'Can only complete a CALLED (serving) token' });
+        }
+
+        token.diagnosis = diagnosis;
+        token.prescription = prescription || '';
+        token.consultationNotes = consultationNotes || '';
+        token.status = 'COMPLETED';
+        await token.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Consultation completed successfully',
+            data: token,
+        });
+    } catch (error) {
+        console.error('Complete token consultation error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

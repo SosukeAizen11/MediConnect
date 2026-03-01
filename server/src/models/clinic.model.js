@@ -16,9 +16,21 @@ const clinicSchema = new mongoose.Schema({
         enum: ['APPOINTMENT', 'TOKEN'],
         required: true,
     },
+    workingHours: {
+        type: String,
+        trim: true,
+    },
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Doctor',
+    },
     isApproved: {
         type: Boolean,
         default: false,
+    },
+    isActive: {
+        type: Boolean,
+        default: true,
     },
     createdAt: {
         type: Date,

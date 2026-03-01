@@ -10,15 +10,16 @@ const doctorSchema = new mongoose.Schema({
     clinic: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Clinic',
-        required: true,
+        default: null,
     },
     specialization: {
         type: String,
-        required: true,
         trim: true,
+        default: '',
     },
     experienceYears: {
         type: Number,
+        default: 0,
     },
     createdAt: {
         type: Date,

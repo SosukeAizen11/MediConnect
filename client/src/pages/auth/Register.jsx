@@ -102,7 +102,7 @@ function Register() {
 
                     {error && (
                         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-                            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                            <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
                             <p className="text-sm text-red-700">{error}</p>
                         </div>
                     )}
@@ -173,8 +173,8 @@ function Register() {
                                     type="button"
                                     onClick={() => setRole('PATIENT')}
                                     className={`p-3 rounded-lg border text-sm font-medium transition-colors ${role === 'PATIENT'
-                                            ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                            : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                                         }`}
                                 >
                                     Patient
@@ -183,8 +183,8 @@ function Register() {
                                     type="button"
                                     onClick={() => setRole('DOCTOR')}
                                     className={`p-3 rounded-lg border text-sm font-medium transition-colors ${role === 'DOCTOR'
-                                            ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                            : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                                         }`}
                                 >
                                     Doctor

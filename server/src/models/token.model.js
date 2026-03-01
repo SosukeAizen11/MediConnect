@@ -29,6 +29,21 @@ const tokenSchema = new mongoose.Schema({
         enum: ['WAITING', 'CALLED', 'COMPLETED', 'CANCELLED'],
         default: 'WAITING',
     },
+    diagnosis: {
+        type: String,
+        trim: true,
+        default: '',
+    },
+    prescription: {
+        type: String,
+        trim: true,
+        default: '',
+    },
+    consultationNotes: {
+        type: String,
+        trim: true,
+        default: '',
+    },
     createdAt: {
         type: Date,
         default: Date.now,

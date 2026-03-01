@@ -77,7 +77,7 @@ function AIHealthInsights() {
     return (
         <div className="space-y-6">
             {/* Page Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-6 shadow-sm">
+            <div className="bg-linear-to-r from-blue-600 to-indigo-600 rounded-xl p-6 shadow-sm">
                 <div className="flex items-center gap-3 mb-2">
                     <Brain className="w-8 h-8 text-white" />
                     <h1 className="text-2xl font-bold text-white">AI Health Insights</h1>
@@ -192,8 +192,8 @@ function AIHealthInsights() {
                                 <div
                                     key={index}
                                     className={`p-4 rounded-lg border ${condition.status === 'attention'
-                                            ? 'bg-yellow-50 border-yellow-200'
-                                            : 'bg-green-50 border-green-200'
+                                        ? 'bg-yellow-50 border-yellow-200'
+                                        : 'bg-green-50 border-green-200'
                                         }`}
                                 >
                                     <div className="flex items-center gap-2">
@@ -219,7 +219,7 @@ function AIHealthInsights() {
                         <ul className="space-y-2">
                             {insights.actions.map((action, index) => (
                                 <li key={index} className="flex items-start gap-2 text-sm text-gray-600">
-                                    <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                    <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
                                     <span>{action}</span>
                                 </li>
                             ))}
@@ -241,7 +241,7 @@ function AIHealthInsights() {
             {/* Disclaimer */}
             <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
                 <div className="flex items-start gap-3">
-                    <Info className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                     <div>
                         <p className="text-sm font-medium text-amber-800">Important Notice</p>
                         <p className="text-sm text-amber-700 mt-1">
