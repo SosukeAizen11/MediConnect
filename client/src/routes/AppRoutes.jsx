@@ -3,7 +3,7 @@ import MainLayout from '../layouts/MainLayout';
 import PatientLayout from '../layouts/PatientLayout';
 import DoctorLayout from '../layouts/DoctorLayout';
 import AdminLayout from '../layouts/AdminLayout';
-import Home from '../pages/Home';
+import LandingPage from '../pages/LandingPage';
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
 import NotFound from '../pages/NotFound';
@@ -62,7 +62,7 @@ function AppRoutes() {
                     token && user ? (
                         <Navigate to={getRedirectPath(user.role)} replace />
                     ) : (
-                        <Home />
+                        <LandingPage />
                     )
                 }
             />
