@@ -3,7 +3,7 @@ import { ArrowRight, CheckCircle2 } from 'lucide-react';
 
 const Hero = () => {
     return (
-        <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden bg-slate-50">
+        <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden bg-slate-50 fade-in-section">
             {/* Background Decorations */}
             <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3">
                 <div className="w-[800px] h-[800px] rounded-full bg-blue-100/50 blur-3xl mix-blend-multiply"></div>

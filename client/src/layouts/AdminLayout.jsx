@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
 import {
     LayoutDashboard,
@@ -20,7 +20,7 @@ function AdminLayout() {
 
     const handleLogout = () => {
         logout();
-        navigate('/login');
+        navigate('/');
     };
 
     const navItems = [
@@ -50,12 +50,17 @@ function AdminLayout() {
                     <div className="p-1.5 bg-indigo-600 rounded-lg">
                         <Shield className="w-5 h-5 text-white" />
                     </div>
-                    <div>
+                    <Link
+                        to="/"
+                        onClick={() => setSidebarOpen(false)}
+                        className="hover:opacity-80 transition-opacity"
+                        title="Go to Home"
+                    >
                         <p className="text-sm font-bold text-gray-800">MediConnect</p>
                         <p className="text-[11px] text-indigo-600 font-medium -mt-0.5">
                             Admin Panel
                         </p>
-                    </div>
+                    </Link>
                 </div>
 
                 {/* Navigation */}
@@ -128,8 +133,10 @@ function AdminLayout() {
                 </header>
 
                 {/* Page Content */}
-                <main className="flex-1 overflow-y-auto p-6">
-                    <Outlet />
+                <main className="flex-1 overflow-y-auto w-full bg-gray-50">
+                    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full animate-in fade-in duration-500">
+                        <Outlet />
+                    </div>
                 </main>
             </div>
         </div>

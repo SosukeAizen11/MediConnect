@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
 import {
     LayoutDashboard,
@@ -45,7 +45,7 @@ function DoctorLayout() {
 
     const handleLogout = () => {
         logout();
-        navigate('/login');
+        navigate('/');
     };
 
     if (loading) {
@@ -110,10 +110,15 @@ function DoctorLayout() {
             >
                 {/* Logo */}
                 <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200">
-                    <div className="flex items-center gap-2">
+                    <Link
+                        to="/"
+                        onClick={() => setSidebarOpen(false)}
+                        className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                        title="Go to Home"
+                    >
                         <Stethoscope className="w-6 h-6 text-emerald-600" />
                         <h1 className="text-xl font-bold text-emerald-600">MediConnect</h1>
-                    </div>
+                    </Link>
                     <button
                         onClick={() => setSidebarOpen(false)}
                         className="lg:hidden text-gray-400 hover:text-gray-600"
@@ -192,14 +197,16 @@ function DoctorLayout() {
                 </header>
 
                 {/* Content Area */}
-                <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
-                    {hasClinic && !isApproved && (
-                        <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3 text-amber-700 shadow-sm">
-                            <AlertCircle className="w-5 h-5 shrink-0" />
-                            <p className="text-sm font-medium">Your clinic is pending admin approval. You will gain full access to the portal once approved.</p>
-                        </div>
-                    )}
-                    <Outlet />
+                <main className="flex-1 overflow-y-auto w-full">
+                    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full animate-in fade-in duration-500">
+                        {hasClinic && !isApproved && (
+                            <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3 text-amber-700 shadow-sm transition-all">
+                                <AlertCircle className="w-5 h-5 shrink-0" />
+                                <p className="text-sm font-medium">Your clinic is pending admin approval. You will gain full access to the portal once approved.</p>
+                            </div>
+                        )}
+                        <Outlet />
+                    </div>
                 </main>
             </div>
         </div>

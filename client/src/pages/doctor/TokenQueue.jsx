@@ -150,60 +150,62 @@ function TokenQueue() {
                         </div>
 
                         {queueData.currentToken ? (
-                            <div className="p-6">
-                                <div className="flex items-center gap-6">
+                            <div className="p-4 sm:p-6">
+                                <div className="flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
                                     {/* Large Token Number */}
-                                    <div className="w-24 h-24 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
+                                    <div className="w-24 h-24 sm:w-28 sm:h-28 shrink-0 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-lg transform transition-transform hover:scale-105 duration-300">
                                         <div className="text-center">
-                                            <p className="text-xs text-emerald-200 font-medium">
+                                            <p className="text-xs sm:text-sm text-emerald-200 font-bold tracking-widest mb-1 shadow-sm">
                                                 TOKEN
                                             </p>
-                                            <p className="text-4xl font-black text-white leading-none">
+                                            <p className="text-4xl sm:text-5xl font-black text-white leading-none drop-shadow-md">
                                                 {queueData.currentToken.tokenNumber}
                                             </p>
                                         </div>
                                     </div>
 
                                     {/* Patient Details */}
-                                    <div className="flex-1 space-y-2">
-                                        <div className="flex items-center gap-2">
-                                            <User className="w-4 h-4 text-gray-400" />
-                                            <p className="text-lg font-bold text-gray-800">
+                                    <div className="flex-1 space-y-3 w-full sm:w-auto">
+                                        <div className="flex items-center justify-center sm:justify-start gap-2">
+                                            <User className="w-5 h-5 text-gray-400" />
+                                            <p className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
                                                 {queueData.currentToken.patient?.name || 'Unknown'}
                                             </p>
                                         </div>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center justify-center sm:justify-start gap-2">
                                             <Phone className="w-4 h-4 text-gray-400" />
-                                            <p className="text-sm text-gray-500">
+                                            <p className="text-sm font-medium text-gray-500">
                                                 {queueData.currentToken.patient?.phone || 'No phone'}
                                             </p>
                                         </div>
-                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                                            Being Served
-                                        </span>
+                                        <div className="flex justify-center sm:justify-start">
+                                            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 shadow-sm">
+                                                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                                                Being Served
+                                            </span>
+                                        </div>
                                     </div>
 
                                     {/* Action Buttons */}
-                                    <div className="flex flex-col gap-2">
+                                    <div className="flex flex-col sm:flex-col gap-3 w-full sm:w-auto mt-6 sm:mt-0">
                                         <button
                                             onClick={() =>
                                                 navigate(`/doctor/token-consult/${queueData.currentToken._id}`)
                                             }
-                                            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
+                                            className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 hover:-translate-y-0.5 active:scale-95 transition-all duration-200 shadow-md"
                                         >
-                                            <ClipboardList className="w-4 h-4" />
-                                            Start Consultation
+                                            <ClipboardList className="w-5 h-5" />
+                                            Start Consult
                                         </button>
                                         <button
                                             onClick={handleAdvance}
                                             disabled={advancing}
-                                            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                            className="flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 hover:-translate-y-0.5 active:scale-95 transition-all duration-200 disabled:transform-none disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
                                         >
                                             {advancing ? (
-                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                <Loader2 className="w-5 h-5 animate-spin" />
                                             ) : (
-                                                <SkipForward className="w-4 h-4" />
+                                                <SkipForward className="w-5 h-5" />
                                             )}
                                             Next Patient
                                         </button>
@@ -263,50 +265,54 @@ function TokenQueue() {
                                 {queueData.waitingTokens.map((token, index) => (
                                     <div
                                         key={token._id}
-                                        className="px-6 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors"
+                                        className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50 transition-colors"
                                     >
-                                        {/* Position */}
-                                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center text-sm font-bold text-gray-500">
-                                            {index + 1}
-                                        </div>
-
-                                        {/* Token Number */}
-                                        <div className="w-14 h-14 bg-amber-50 border-2 border-amber-200 rounded-xl flex items-center justify-center">
-                                            <div className="text-center">
-                                                <p className="text-[10px] text-amber-500 font-medium leading-none">
-                                                    TKN
-                                                </p>
-                                                <p className="text-xl font-black text-amber-700 leading-none mt-0.5">
-                                                    {token.tokenNumber}
-                                                </p>
+                                        <div className="flex items-center gap-3 sm:gap-4">
+                                            {/* Position */}
+                                            <div className="w-8 h-8 shrink-0 bg-gray-100 rounded-lg flex items-center justify-center text-sm font-bold text-gray-500">
+                                                {index + 1}
                                             </div>
-                                        </div>
 
-                                        {/* Patient Info */}
-                                        <div className="flex-1">
-                                            <p className="font-semibold text-gray-800">
-                                                {token.patient?.name || 'Unknown Patient'}
-                                            </p>
-                                            <div className="flex items-center gap-3 mt-0.5">
-                                                <span className="text-xs text-gray-400 flex items-center gap-1">
-                                                    <Phone className="w-3 h-3" />
-                                                    {token.patient?.phone || 'No phone'}
-                                                </span>
-                                                <span className="text-xs text-gray-400 flex items-center gap-1">
-                                                    <Clock className="w-3 h-3" />
-                                                    {new Date(token.createdAt).toLocaleTimeString([], {
-                                                        hour: '2-digit',
-                                                        minute: '2-digit',
-                                                    })}
-                                                </span>
+                                            {/* Token Number */}
+                                            <div className="w-14 h-14 shrink-0 bg-amber-50 border-2 border-amber-200 rounded-xl flex items-center justify-center">
+                                                <div className="text-center">
+                                                    <p className="text-[10px] text-amber-500 font-bold uppercase tracking-wider leading-none mb-0.5">
+                                                        TKN
+                                                    </p>
+                                                    <p className="text-xl font-black text-amber-700 leading-none">
+                                                        {token.tokenNumber}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* Patient Info */}
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-bold text-gray-900 truncate">
+                                                    {token.patient?.name || 'Unknown Patient'}
+                                                </p>
+                                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+                                                    <span className="text-xs text-gray-500 font-medium flex items-center gap-1">
+                                                        <Phone className="w-3 h-3" />
+                                                        {token.patient?.phone || 'No phone'}
+                                                    </span>
+                                                    <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
+                                                        <Clock className="w-3 h-3" />
+                                                        {new Date(token.createdAt).toLocaleTimeString([], {
+                                                            hour: '2-digit',
+                                                            minute: '2-digit',
+                                                        })}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
 
                                         {/* Status Badge */}
-                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                                            Waiting
-                                        </span>
+                                        <div className="sm:ml-4 sm:shrink-0 flex justify-end">
+                                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 shadow-sm">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                                Waiting
+                                            </span>
+                                        </div>
                                     </div>
                                 ))}
                             </div>

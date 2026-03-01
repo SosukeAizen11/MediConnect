@@ -144,8 +144,8 @@ function AllClinics() {
             {/* Table */}
             {!error && clinics.length > 0 && (
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden text-sm">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
+                    <div className="overflow-x-auto hide-scrollbar">
+                        <table className="w-full text-left border-collapse min-w-[800px]">
                             <thead>
                                 <tr className="bg-gray-50 border-b border-gray-200 text-gray-600">
                                     <th className="px-6 py-4 font-semibold shrink-0">Clinic Info</th>
@@ -210,8 +210,8 @@ function AllClinics() {
                                                     disabled={processingId === `toggle-${clinic._id}`}
                                                     title={clinic.isActive ? "Disable Clinic" : "Enable Clinic"}
                                                     className={`p-2 rounded-lg transition-colors border ${clinic.isActive
-                                                            ? 'text-amber-600 hover:bg-amber-50 border-transparent hover:border-amber-200'
-                                                            : 'text-green-600 hover:bg-green-50 border-transparent hover:border-green-200'
+                                                        ? 'text-amber-600 hover:bg-amber-50 border-transparent hover:border-amber-200'
+                                                        : 'text-green-600 hover:bg-green-50 border-transparent hover:border-green-200'
                                                         } disabled:opacity-50`}
                                                 >
                                                     {processingId === `toggle-${clinic._id}` ? (

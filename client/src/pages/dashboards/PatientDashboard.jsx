@@ -98,53 +98,55 @@ function PatientDashboard() {
     ];
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 md:space-y-8 pb-10">
             {/* Welcome Section */}
-            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                <h1 className="text-2xl font-bold text-gray-800">Welcome back</h1>
-                <p className="text-gray-600 mt-1">
-                    Manage your appointments, reports, and health insights
+            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-gray-100 shadow-sm">
+                <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">Welcome back</h1>
+                <p className="text-gray-500 mt-2 text-sm sm:text-base">
+                    Manage your appointments, reports, and health insights safely.
                 </p>
             </div>
 
             {/* My Token Status Card */}
-            <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-6 border border-orange-200 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                        <Ticket className="w-5 h-5 text-orange-600" />
-                        <h2 className="text-lg font-semibold text-gray-800">My Token Status</h2>
+            <div className="bg-linear-to-br from-orange-50 to-amber-50 rounded-2xl p-6 sm:p-8 border border-orange-200 shadow-md hover:shadow-lg transition-all duration-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-orange-100 rounded-lg">
+                            <Ticket className="w-6 h-6 text-orange-600" />
+                        </div>
+                        <h2 className="text-xl font-bold text-gray-900 tracking-tight">My Token Status</h2>
                     </div>
                     <button
                         onClick={() => navigate('/patient/token')}
-                        className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+                        className="text-sm text-orange-600 hover:text-orange-700 font-bold border-2 border-orange-200 hover:border-orange-300 bg-white px-4 py-2 rounded-xl transition-all w-full sm:w-auto"
                     >
-                        View Details
+                        View Full Screen
                     </button>
                 </div>
 
                 {tokenLoading ? (
-                    <div className="flex items-center justify-center py-6">
-                        <Loader2 className="w-6 h-6 text-orange-600 animate-spin" />
+                    <div className="flex items-center justify-center py-10">
+                        <Loader2 className="w-8 h-8 text-orange-600 animate-spin" />
                     </div>
                 ) : tokenData?.hasActiveToken ? (
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                         {/* Clinic Info */}
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <Building2 className="w-4 h-4 text-gray-400" />
+                        <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 bg-white/50 w-fit px-4 py-2 rounded-lg border border-orange-100">
+                            <Building2 className="w-4 h-4 text-orange-500" />
                             <span>{tokenData.data.clinicName}</span>
                         </div>
 
                         {/* Token Numbers */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-white rounded-lg p-4 border border-orange-200">
-                                <p className="text-sm text-gray-500 mb-1">Your Token</p>
-                                <p className="text-3xl font-bold text-orange-600">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-center sm:text-left">
+                            <div className="bg-white rounded-2xl p-6 border border-orange-200 shadow-sm hover:shadow-md transition-shadow hover:-translate-y-1 duration-300 flex flex-col items-center sm:items-start">
+                                <p className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2">Your Token</p>
+                                <p className="text-5xl font-black text-orange-600 tracking-tighter">
                                     #{tokenData.data.tokenNumber}
                                 </p>
                             </div>
-                            <div className="bg-white rounded-lg p-4 border border-orange-200">
-                                <p className="text-sm text-gray-500 mb-1">Current Token</p>
-                                <p className="text-3xl font-bold text-gray-800">
+                            <div className="bg-white rounded-2xl p-6 border border-orange-200 shadow-sm flex flex-col items-center sm:items-start">
+                                <p className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2">Now Serving</p>
+                                <p className="text-5xl font-black text-gray-800 tracking-tighter">
                                     #{tokenData.data.currentToken || '-'}
                                 </p>
                             </div>
@@ -170,8 +172,8 @@ function PatientDashboard() {
                         <div className="flex items-center gap-2">
                             <span
                                 className={`px-3 py-1 rounded-full text-xs font-medium ${tokenData.data.status === 'CALLED'
-                                        ? 'bg-green-100 text-green-700'
-                                        : 'bg-orange-100 text-orange-700'
+                                    ? 'bg-green-100 text-green-700'
+                                    : 'bg-orange-100 text-orange-700'
                                     }`}
                             >
                                 {tokenData.data.status === 'CALLED' ? 'Your Turn!' : 'Waiting'}
@@ -196,21 +198,21 @@ function PatientDashboard() {
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                 {kpiCards.map((card) => {
                     const Icon = card.icon;
                     return (
                         <div
                             key={card.label}
-                            className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                            className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
                         >
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm text-gray-500 font-medium">{card.label}</p>
-                                    <p className="text-3xl font-bold text-gray-800 mt-1">{card.value}</p>
+                                    <p className="text-sm text-gray-500 font-semibold uppercase tracking-wider">{card.label}</p>
+                                    <p className="text-4xl font-black text-gray-900 mt-2">{card.value}</p>
                                 </div>
-                                <div className={`p-3 rounded-lg ${card.bg}`}>
-                                    <Icon className={`w-6 h-6 ${card.color}`} />
+                                <div className={`p-4 rounded-xl ${card.bg}`}>
+                                    <Icon className={`w-7 h-7 ${card.color}`} />
                                 </div>
                             </div>
                         </div>
@@ -219,18 +221,18 @@ function PatientDashboard() {
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h2>
-                <div className="flex flex-wrap gap-3">
+            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-gray-100 shadow-sm">
+                <h2 className="text-xl font-bold text-gray-900 mb-6 tracking-tight">Quick Actions</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {quickActions.map((action) => {
                         const Icon = action.icon;
                         return (
                             <button
                                 key={action.label}
                                 onClick={() => navigate(action.path)}
-                                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-white text-sm font-medium transition-colors ${action.color}`}
+                                className={`flex items-center justify-center gap-2 px-4 py-4 rounded-xl text-white text-sm font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 active:scale-95 ${action.color}`}
                             >
-                                <Icon className="w-4 h-4" />
+                                <Icon className="w-5 h-5" />
                                 {action.label}
                             </button>
                         );

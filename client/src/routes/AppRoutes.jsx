@@ -56,16 +56,7 @@ function AppRoutes() {
     return (
         <Routes>
             {/* Public Routes */}
-            <Route
-                path="/"
-                element={
-                    token && user ? (
-                        <Navigate to={getRedirectPath(user.role)} replace />
-                    ) : (
-                        <LandingPage />
-                    )
-                }
-            />
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
 

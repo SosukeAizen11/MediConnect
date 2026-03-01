@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
 import {
     LayoutDashboard,
@@ -11,15 +11,19 @@ import {
     UserCircle,
     Newspaper,
     LogOut,
+    Menu,
+    X,
 } from 'lucide-react';
+import { useState } from 'react';
 
 function PatientLayout() {
     const { logout } = useAuthContext();
     const navigate = useNavigate();
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const handleLogout = () => {
         logout();
-        navigate('/login');
+        navigate('/');
     };
 
     const navItems = [
@@ -35,12 +39,33 @@ function PatientLayout() {
     ];
 
     return (
-        <div className="flex h-screen bg-gray-100 overflow-hidden">
+        <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
+            {/* Mobile Sidebar Overlay */}
+            {isMobileMenuOpen && (
+                <div
+                    className="fixed inset-0 bg-black/40 z-40 md:hidden backdrop-blur-sm transition-opacity"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
-            <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
-                {/* Logo */}
-                <div className="h-16 flex items-center px-6 border-b border-gray-200">
-                    <h1 className="text-xl font-bold text-blue-600">MediConnect</h1>
+            <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
+                {/* Logo & Close Button (Mobile) */}
+                <div className="h-16 flex items-center justify-between px-6 border-b border-gray-100 shrink-0">
+                    <Link
+                        to="/"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="text-xl font-black text-blue-600 tracking-tight hover:opacity-80 transition-opacity cursor-pointer group"
+                        title="Go to Home"
+                    >
+                        Medi<span className="text-blue-500 group-hover:text-blue-400 transition-colors">Connect</span>
+                    </Link>
+                    <button
+                        className="md:hidden text-gray-500 hover:text-gray-800 transition-colors p-1"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
                 </div>
 
                 {/* Navigation */}
@@ -51,6 +76,7 @@ function PatientLayout() {
                             <NavLink
                                 key={item.path}
                                 to={item.path}
+                                onClick={() => setIsMobileMenuOpen(false)}
                                 className={({ isActive }) =>
                                     `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${isActive
                                         ? 'bg-blue-50 text-blue-600'
@@ -77,11 +103,18 @@ function PatientLayout() {
                 </div>
             </aside>
 
-            {/* Main Area */}
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-hidden w-full">
                 {/* Top Header */}
-                <header className="h-16 bg-white border-b border-gray-200 shadow-sm flex items-center justify-between px-6">
-                    <h2 className="text-lg font-semibold text-gray-800">Patient Portal</h2>
+                <header className="h-16 bg-white border-b border-gray-100 shadow-sm flex items-center justify-between px-4 sm:px-6 z-10">
+                    <div className="flex items-center gap-4">
+                        <button
+                            className="md:hidden text-gray-600 hover:text-blue-600 transition-colors p-1"
+                            onClick={() => setIsMobileMenuOpen(true)}
+                        >
+                            <Menu className="w-6 h-6" />
+                        </button>
+                        <h2 className="text-lg font-bold text-gray-800">Patient Portal</h2>
+                    </div>
                     <button
                         onClick={handleLogout}
                         className="text-sm text-gray-600 hover:text-gray-900 font-medium"
@@ -91,8 +124,10 @@ function PatientLayout() {
                 </header>
 
                 {/* Content Area */}
-                <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
-                    <Outlet />
+                <main className="flex-1 overflow-y-auto w-full">
+                    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full animate-in fade-in duration-500">
+                        <Outlet />
+                    </div>
                 </main>
             </div>
         </div>

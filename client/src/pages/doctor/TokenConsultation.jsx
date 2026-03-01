@@ -121,8 +121,8 @@ function TokenConsultation() {
             {toast && (
                 <div
                     className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-lg shadow-lg border text-sm font-medium ${toast.type === 'success'
-                            ? 'bg-green-50 border-green-200 text-green-700'
-                            : 'bg-red-50 border-red-200 text-red-700'
+                        ? 'bg-green-50 border-green-200 text-green-700'
+                        : 'bg-red-50 border-red-200 text-red-700'
                         }`}
                 >
                     {toast.type === 'success' ? (
@@ -135,8 +135,8 @@ function TokenConsultation() {
             )}
 
             {/* Header */}
-            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                <div className="flex items-center justify-between">
+            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm transition-all duration-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => navigate('/doctor/token-queue')}
@@ -170,8 +170,8 @@ function TokenConsultation() {
                     </div>
                     <span
                         className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${isCompleted
-                                ? 'bg-green-50 text-green-700 border-green-200'
-                                : 'bg-blue-50 text-blue-700 border-blue-200'
+                            ? 'bg-green-50 text-green-700 border-green-200'
+                            : 'bg-blue-50 text-blue-700 border-blue-200'
                             }`}
                     >
                         <span
@@ -188,14 +188,14 @@ function TokenConsultation() {
                 {/* Left Column — Patient Info (2/5) */}
                 <div className="lg:col-span-2 space-y-6">
                     {/* Patient Details Card */}
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-                            <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                        <div className="px-6 py-4 bg-gray-50 border-b border-gray-100">
+                            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
                                 <User className="w-4 h-4" />
                                 Patient Information
                             </h2>
                         </div>
-                        <div className="p-6 space-y-4">
+                        <div className="p-6 space-y-5">
                             <div className="flex items-center gap-4">
                                 <div className="w-14 h-14 bg-emerald-50 border border-emerald-200 rounded-full flex items-center justify-center">
                                     <User className="w-7 h-7 text-emerald-600" />
@@ -243,9 +243,9 @@ function TokenConsultation() {
                     </div>
 
                     {/* Past Visits */}
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-                            <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                        <div className="px-6 py-4 bg-gray-50 border-b border-gray-100">
+                            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
                                 <History className="w-4 h-4" />
                                 Past Visits ({pastTokens.length})
                             </h2>
@@ -289,35 +289,35 @@ function TokenConsultation() {
                 {/* Right Column — Consultation Form (3/5) */}
                 <div className="lg:col-span-3">
                     {isCompleted ? (
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                            <div className="px-6 py-4 bg-green-50 border-b border-green-200">
-                                <h2 className="text-sm font-semibold text-green-800 uppercase tracking-wider flex items-center gap-2">
+                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                            <div className="px-6 py-4 bg-green-50 border-b border-green-100">
+                                <h2 className="text-sm font-bold text-green-700 uppercase tracking-wider flex items-center gap-2">
                                     <CheckCircle2 className="w-4 h-4" />
                                     Consultation Completed
                                 </h2>
                             </div>
-                            <div className="p-6 space-y-5">
+                            <div className="p-6 space-y-6">
                                 <div>
-                                    <label className="text-xs text-gray-400 font-semibold uppercase tracking-wider">
+                                    <label className="text-xs text-gray-400 font-bold uppercase tracking-wider">
                                         Diagnosis
                                     </label>
-                                    <p className="mt-1 text-gray-800 bg-gray-50 p-3 rounded-lg border border-gray-200 text-sm">
+                                    <p className="mt-2 text-gray-800 bg-gray-50 p-4 rounded-xl border border-gray-100 text-sm font-medium">
                                         {token.diagnosis || 'N/A'}
                                     </p>
                                 </div>
                                 <div>
-                                    <label className="text-xs text-gray-400 font-semibold uppercase tracking-wider">
+                                    <label className="text-xs text-gray-400 font-bold uppercase tracking-wider">
                                         Prescription
                                     </label>
-                                    <p className="mt-1 text-gray-800 bg-gray-50 p-3 rounded-lg border border-gray-200 text-sm whitespace-pre-wrap">
+                                    <p className="mt-2 text-gray-800 bg-gray-50 p-4 rounded-xl border border-gray-100 text-sm whitespace-pre-wrap font-medium">
                                         {token.prescription || 'N/A'}
                                     </p>
                                 </div>
                                 <div>
-                                    <label className="text-xs text-gray-400 font-semibold uppercase tracking-wider">
+                                    <label className="text-xs text-gray-400 font-bold uppercase tracking-wider">
                                         Notes
                                     </label>
-                                    <p className="mt-1 text-gray-800 bg-gray-50 p-3 rounded-lg border border-gray-200 text-sm whitespace-pre-wrap">
+                                    <p className="mt-2 text-gray-800 bg-gray-50 p-4 rounded-xl border border-gray-100 text-sm whitespace-pre-wrap font-medium">
                                         {token.consultationNotes || 'N/A'}
                                     </p>
                                 </div>
@@ -326,10 +326,10 @@ function TokenConsultation() {
                     ) : (
                         <form
                             onSubmit={handleSubmit}
-                            className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden"
+                            className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
                         >
-                            <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-                                <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                            <div className="px-6 py-4 bg-gray-50 border-b border-gray-100">
+                                <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
                                     <ClipboardList className="w-4 h-4" />
                                     Consultation Form
                                 </h2>
@@ -381,16 +381,16 @@ function TokenConsultation() {
                                 </div>
                             </div>
 
-                            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+                            <div className="px-6 py-5 bg-gray-50 border-t border-gray-100 flex justify-end">
                                 <button
                                     type="submit"
                                     disabled={saving}
-                                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 hover:-translate-y-0.5 active:scale-95 shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                                 >
                                     {saving ? (
-                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <Loader2 className="w-5 h-5 animate-spin" />
                                     ) : (
-                                        <CheckCircle2 className="w-4 h-4" />
+                                        <CheckCircle2 className="w-5 h-5" />
                                     )}
                                     Complete Consultation
                                 </button>

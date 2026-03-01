@@ -33,9 +33,9 @@ const Testimonials = () => {
                     <h3 className="text-3xl md:text-4xl font-black mb-6">Don't just take our word for it</h3>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-8">
+                <div className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto snap-x snap-mandatory pb-8 md:pb-0 hide-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
                     {reviews.map((review, index) => (
-                        <div key={index} className="bg-slate-800/80 backdrop-blur-sm p-8 rounded-2xl border border-slate-700 shadow-xl">
+                        <div key={index} className="w-[85vw] md:w-auto shrink-0 snap-center bg-slate-800/80 backdrop-blur-sm p-8 rounded-2xl border border-slate-700 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:border-slate-600">
                             <div className="flex items-center gap-1 mb-6">
                                 {[1, 2, 3, 4, 5].map((star) => (
                                     <Star key={star} className="w-5 h-5 fill-amber-400 text-amber-400" />
@@ -45,11 +45,11 @@ const Testimonials = () => {
                                 "{review.text}"
                             </p>
                             <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-full ${review.avatar} flex items-center justify-center font-bold text-xl`}>
+                                <div className={`shrink-0 w-12 h-12 rounded-full ${review.avatar} flex items-center justify-center font-bold text-xl`}>
                                     {review.name.charAt(0)}
                                 </div>
                                 <div>
-                                    <h4 className="font-bold text-white">{review.name}</h4>
+                                    <h4 className="font-bold text-white max-w-[200px] truncate">{review.name}</h4>
                                     <p className="text-sm text-slate-400">{review.role}</p>
                                 </div>
                             </div>

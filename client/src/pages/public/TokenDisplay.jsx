@@ -11,6 +11,14 @@ function TokenDisplay() {
     const [waitingTokens, setWaitingTokens] = useState([]);
     const [isConnected, setIsConnected] = useState(false);
     const [error, setError] = useState(null);
+    const [flash, setFlash] = useState(false);
+
+    useEffect(() => {
+        if (!currentToken) return;
+        setFlash(true);
+        const timer = setTimeout(() => setFlash(false), 1000);
+        return () => clearTimeout(timer);
+    }, [currentToken?.tokenNumber]);
 
     // Fetch initial clinic details 
     useEffect(() => {
@@ -99,40 +107,40 @@ function TokenDisplay() {
             )}
 
             {/* Main Content Area */}
-            <main className="flex-1 flex overflow-hidden">
+            <main className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
 
                 {/* Left Side - Current Token (Massive) */}
-                <div className="flex-1 flex flex-col items-center justify-center p-12 relative border-r border-slate-800/50 overflow-hidden">
+                <div className="flex-1 flex flex-col items-center justify-center p-8 lg:p-12 relative border-b lg:border-b-0 lg:border-r border-slate-800/50 overflow-hidden min-h-[50vh] lg:min-h-0">
                     {/* Background glow */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-500/10 rounded-full blur-3xl -z-10"></div>
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] sm:w-[500px] sm:h-[500px] lg:w-[600px] lg:h-[600px] bg-indigo-500/10 rounded-full blur-3xl -z-10"></div>
 
                     {currentToken ? (
                         <>
-                            <p className="text-slate-400 text-2xl font-semibold tracking-widest uppercase mb-6">Token Number</p>
-                            <h2 className="text-[12rem] leading-none font-black text-white tracking-tighter drop-shadow-2xl">
+                            <p className="text-slate-400 text-lg sm:text-2xl font-semibold tracking-widest uppercase mb-4 sm:mb-6">Token Number</p>
+                            <h2 className={`text-[6rem] sm:text-[10rem] lg:text-[14rem] leading-none font-black tracking-tighter drop-shadow-2xl transition-all duration-500 ${flash ? 'scale-110 text-emerald-400 drop-shadow-[0_0_50px_rgba(52,211,153,0.8)]' : 'text-white'}`}>
                                 {currentToken.tokenNumber}
                             </h2>
-                            <div className="mt-8 px-8 py-4 bg-indigo-500/20 border border-indigo-500/30 rounded-2xl backdrop-blur-sm">
-                                <p className="text-3xl font-bold text-indigo-300">
+                            <div className={`mt-6 sm:mt-8 px-6 sm:px-8 py-3 sm:py-4 border rounded-2xl backdrop-blur-sm transition-colors duration-500 ${flash ? 'bg-emerald-500/20 border-emerald-500/30' : 'bg-indigo-500/20 border-indigo-500/30'}`}>
+                                <p className={`text-xl sm:text-3xl font-bold transition-colors duration-500 ${flash ? 'text-emerald-300' : 'text-indigo-300'}`}>
                                     {currentToken.patient?.name ? currentToken.patient.name : 'Patient Name Withheld'}
                                 </p>
                             </div>
                         </>
                     ) : (
-                        <div className="flex flex-col items-center justify-center text-center">
-                            <Activity className="w-24 h-24 text-slate-700 mb-8" />
-                            <h2 className="text-5xl font-bold text-slate-500 mb-4">Please Wait</h2>
-                            <p className="text-2xl text-slate-600">The doctor is preparing to call the next patient.</p>
+                        <div className="flex flex-col items-center justify-center text-center px-4">
+                            <Activity className="w-16 h-16 sm:w-24 sm:h-24 text-slate-700 mb-6 sm:mb-8" />
+                            <h2 className="text-3xl sm:text-5xl font-bold text-slate-500 mb-2 sm:mb-4">Please Wait</h2>
+                            <p className="text-lg sm:text-2xl text-slate-600">The doctor is preparing to call the next patient.</p>
                         </div>
                     )}
                 </div>
 
                 {/* Right Side - Up Next Queue */}
-                <div className="w-[450px] bg-slate-900/50 flex flex-col">
-                    <div className="p-8 border-b border-slate-800">
-                        <h3 className="text-2xl font-bold text-white flex items-center justify-between">
+                <div className="w-full lg:w-[450px] bg-slate-900/50 flex flex-col">
+                    <div className="p-6 sm:p-8 border-b border-slate-800 shrink-0">
+                        <h3 className="text-xl sm:text-2xl font-bold text-white flex items-center justify-between">
                             Up Next
-                            <span className="bg-slate-800 text-slate-300 text-sm py-1 px-3 rounded-full font-bold">
+                            <span className="bg-slate-800 text-slate-300 text-xs sm:text-sm py-1 px-3 rounded-full font-bold">
                                 {waitingTokens.length} Waiting
                             </span>
                         </h3>
@@ -183,8 +191,8 @@ function TokenDisplay() {
             </main>
 
             {/* Bottom Marquee / Footer */}
-            <footer className="h-16 bg-indigo-600 flex items-center justify-center shrink-0">
-                <p className="text-xl font-bold text-white tracking-wide">
+            <footer className="h-16 bg-indigo-600 flex items-center justify-center shrink-0 px-4 text-center">
+                <p className="text-sm sm:text-xl font-bold text-white tracking-wide truncate">
                     Please wait for your token number to be displayed on the screen.
                 </p>
             </footer>
