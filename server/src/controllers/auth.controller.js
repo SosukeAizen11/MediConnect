@@ -67,6 +67,11 @@ export const login = async (req, res, next) => {
         const user = await User.findOne({ email });
 
         if (user && (await user.matchPassword(password))) {
+            if (user.isActive === false) {
+                res.status(403);
+                throw new Error('Your account has been disabled by admin');
+            }
+
             // Auto-create Doctor profile if missing (for legacy DOCTOR accounts)
             if (user.role === 'DOCTOR') {
                 const existingProfile = await Doctor.findOne({ user: user._id });

@@ -1,6 +1,7 @@
 import Token from '../models/token.model.js';
 import Clinic from '../models/clinic.model.js';
 import Doctor from '../models/doctor.model.js';
+import { getIO } from '../socket.js';
 
 // Join token queue
 export const joinTokenQueue = async (req, res) => {
@@ -59,13 +60,35 @@ export const joinTokenQueue = async (req, res) => {
 
         await token.save();
 
-        // Count tokens ahead
         const tokensAhead = await Token.countDocuments({
             clinic: clinicId,
             date: today,
             tokenNumber: { $lt: nextTokenNumber },
             status: 'WAITING',
         });
+
+        // Emit real-time update to the specific clinic room
+        try {
+            const io = getIO();
+            const waitingTokens = await Token.find({
+                clinic: clinicId,
+                date: today,
+                status: 'WAITING',
+            }).populate('patient', 'name email phone').sort({ tokenNumber: 1 });
+
+            const currentServing = await Token.findOne({
+                clinic: clinicId,
+                date: today,
+                status: 'CALLED'
+            }).populate('patient', 'name email phone');
+
+            io.to(`clinic:${clinicId.toString()}`).emit('token:update', {
+                currentToken: currentServing || null,
+                waitingTokens
+            });
+        } catch (socketError) {
+            console.error('Socket emission error:', socketError);
+        }
 
         res.status(201).json({
             message: 'Token assigned successfully',
@@ -297,6 +320,18 @@ export const advanceToken = async (req, res) => {
 
         const clinic = await Clinic.findById(doctorDoc.clinic);
 
+        // Emit real-time update to the specific clinic room
+        try {
+            const io = getIO();
+            io.to(`clinic:${doctorDoc.clinic.toString()}`).emit('token:update', {
+                currentToken: updatedCurrentToken || null,
+                waitingTokens
+            });
+        } catch (socketError) {
+            console.error('Socket emission error:', socketError);
+            // Non-blocking, continue to send response
+        }
+
         res.status(200).json({
             success: true,
             message: nextToken
@@ -398,6 +433,28 @@ export const completeTokenConsultation = async (req, res) => {
         token.consultationNotes = consultationNotes || '';
         token.status = 'COMPLETED';
         await token.save();
+
+        // Emit real-time update
+        try {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const io = getIO();
+            const waitingTokens = await Token.find({
+                clinic: doctorDoc.clinic,
+                date: today,
+                status: 'WAITING',
+            }).populate('patient', 'name email phone').sort({ tokenNumber: 1 });
+
+            // Since we just completed the token, current serving is likely null until advanced
+            // Or we could return the completed token. We'll return null to clear it.
+            io.to(`clinic:${doctorDoc.clinic.toString()}`).emit('token:update', {
+                currentToken: null,
+                waitingTokens
+            });
+        } catch (socketError) {
+            console.error('Socket emission error:', socketError);
+        }
 
         res.status(200).json({
             success: true,

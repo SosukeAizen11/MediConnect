@@ -9,6 +9,7 @@ import Register from '../pages/auth/Register';
 import NotFound from '../pages/NotFound';
 import ProtectedRoute from '../components/ProtectedRoute';
 import { useAuthContext } from '../context/AuthContext';
+import TokenDisplay from '../pages/public/TokenDisplay';
 import BrowseClinics from '../pages/patient/BrowseClinics';
 import ClinicDoctors from '../pages/patient/ClinicDoctors';
 import BookAppointment from '../pages/patient/BookAppointment';
@@ -34,6 +35,7 @@ import RegisterClinic from '../pages/doctor/RegisterClinic';
 import AdminDashboard from '../pages/dashboards/AdminDashboard';
 import ClinicApprovals from '../pages/admin/ClinicApprovals';
 import AllClinics from '../pages/admin/AllClinics';
+import Users from '../pages/admin/Users';
 
 const getRedirectPath = (role) => {
     switch (role) {
@@ -66,6 +68,9 @@ function AppRoutes() {
             />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+
+            {/* Public TV Token Display */}
+            <Route path="/display/:clinicId" element={<TokenDisplay />} />
 
             {/* Patient Routes with PatientLayout */}
             <Route
@@ -113,6 +118,7 @@ function AppRoutes() {
                     <Route path="/admin/dashboard" element={<AdminDashboard />} />
                     <Route path="/admin/approvals" element={<ClinicApprovals />} />
                     <Route path="/admin/clinics" element={<AllClinics />} />
+                    <Route path="/admin/users" element={<Users />} />
                 </Route>
             </Route>
 

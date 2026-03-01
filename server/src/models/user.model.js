@@ -23,6 +23,10 @@ const userSchema = new mongoose.Schema({
         enum: ['PATIENT', 'DOCTOR', 'ADMIN'],
         default: 'PATIENT',
     },
+    isActive: {
+        type: Boolean,
+        default: true,
+    },
     // Profile fields
     phone: {
         type: String,

@@ -28,7 +28,6 @@ function AdminLayout() {
         { path: '/admin/approvals', label: 'Clinic Approvals', icon: ClipboardCheck },
         { path: '/admin/clinics', label: 'All Clinics', icon: Building2 },
         { path: '/admin/users', label: 'Users', icon: Users },
-        { path: '/admin/analytics', label: 'System Analytics', icon: BarChart3 },
     ];
 
     return (
