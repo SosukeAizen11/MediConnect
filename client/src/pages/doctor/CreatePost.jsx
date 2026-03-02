@@ -11,6 +11,7 @@ import {
     AlertCircle,
     Loader2,
     Send,
+    UploadCloud,
 } from 'lucide-react';
 
 function CreatePost() {
@@ -22,8 +23,9 @@ function CreatePost() {
     const [formData, setFormData] = useState({
         title: '',
         content: '',
-        imageUrl: '',
+        image: null,
     });
+    const [imagePreview, setImagePreview] = useState(null);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -50,6 +52,14 @@ function CreatePost() {
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setFormData((prev) => ({ ...prev, image: file }));
+            setImagePreview(URL.createObjectURL(file));
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!formData.title.trim()) {
@@ -60,15 +70,22 @@ function CreatePost() {
             setToast({ type: 'error', message: 'Content is required' });
             return;
         }
+        if (!formData.image) {
+            setToast({ type: 'error', message: 'Image is required' });
+            return;
+        }
 
         setSaving(true);
         try {
-            await createPost({
-                title: formData.title,
-                content: formData.content,
-                imageUrl: formData.imageUrl || undefined,
-                clinicId: clinicId || undefined,
-            });
+            const formDataToSend = new FormData();
+            formDataToSend.append('title', formData.title);
+            formDataToSend.append('content', formData.content);
+            formDataToSend.append('image', formData.image);
+            if (clinicId) {
+                formDataToSend.append('clinicId', clinicId);
+            }
+
+            await createPost(formDataToSend);
             setToast({ type: 'success', message: 'Post published successfully!' });
             setTimeout(() => navigate('/doctor/posts'), 1500);
         } catch (err) {
@@ -87,8 +104,8 @@ function CreatePost() {
             {toast && (
                 <div
                     className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-lg shadow-lg border text-sm font-medium ${toast.type === 'success'
-                            ? 'bg-green-50 border-green-200 text-green-700'
-                            : 'bg-red-50 border-red-200 text-red-700'
+                        ? 'bg-green-50 border-green-200 text-green-700'
+                        : 'bg-red-50 border-red-200 text-red-700'
                         }`}
                 >
                     {toast.type === 'success' ? (
@@ -153,31 +170,52 @@ function CreatePost() {
                         />
                     </div>
 
-                    {/* Image URL */}
+                    {/* Image Upload */}
                     <div>
                         <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
                             <Image className="w-4 h-4 text-amber-500" />
-                            Image URL
-                            <span className="text-xs text-gray-400 font-normal">(optional)</span>
+                            Post Image <span className="text-red-500">*</span>
                         </label>
-                        <input
-                            type="url"
-                            name="imageUrl"
-                            value={formData.imageUrl}
-                            onChange={handleChange}
-                            placeholder="https://example.com/image.jpg"
-                            className="w-full px-4 py-3 rounded-lg border border-gray-300 text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
-                        />
-                        {formData.imageUrl && (
-                            <div className="mt-3 rounded-lg overflow-hidden border border-gray-200">
-                                <img
-                                    src={formData.imageUrl}
-                                    alt="Preview"
-                                    className="w-full h-48 object-cover"
-                                    onError={(e) => {
-                                        e.target.style.display = 'none';
-                                    }}
+
+                        {!imagePreview ? (
+                            <label className="flex flex-col items-center justify-center w-full h-48 sm:h-64 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 hover:border-emerald-400 transition-colors">
+                                <div className="flex flex-col items-center justify-center pt-5 pb-6 text-gray-500">
+                                    <UploadCloud className="w-10 h-10 mb-3 text-emerald-500" />
+                                    <p className="mb-2 text-sm font-semibold">
+                                        Click to upload image
+                                    </p>
+                                    <p className="text-xs text-gray-400">
+                                        JPG, JPEG, PNG, WEBP
+                                    </p>
+                                </div>
+                                <input
+                                    type="file"
+                                    name="image"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={handleFileChange}
                                 />
+                            </label>
+                        ) : (
+                            <div className="relative rounded-xl overflow-hidden border border-gray-200 group">
+                                <img
+                                    src={imagePreview}
+                                    alt="Preview"
+                                    className="w-full h-48 sm:h-80 object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <label className="cursor-pointer bg-white text-gray-800 px-4 py-2 rounded-lg text-sm font-semibold shadow flex items-center gap-2 hover:bg-gray-50 transition-colors">
+                                        <Image className="w-4 h-4" />
+                                        Change Image
+                                        <input
+                                            type="file"
+                                            name="image"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={handleFileChange}
+                                        />
+                                    </label>
+                                </div>
                             </div>
                         )}
                     </div>

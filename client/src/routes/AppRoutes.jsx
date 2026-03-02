@@ -20,7 +20,7 @@ import Notifications from '../pages/patient/Notifications';
 import JoinTokenQueue from '../pages/patient/JoinTokenQueue';
 import MyToken from '../pages/patient/MyToken';
 import Profile from '../pages/patient/Profile';
-import DoctorFeed from '../pages/patient/DoctorFeed';
+import Feed from '../pages/patient/Feed';
 import PatientDashboard from '../pages/dashboards/PatientDashboard';
 import DoctorDashboard from '../pages/doctor/DoctorDashboard';
 import AppointmentQueue from '../pages/doctor/AppointmentQueue';
@@ -79,7 +79,7 @@ function AppRoutes() {
                     <Route path="/patient/join-token/:clinicId" element={<JoinTokenQueue />} />
                     <Route path="/patient/token" element={<MyToken />} />
                     <Route path="/patient/profile" element={<Profile />} />
-                    <Route path="/patient/feed" element={<DoctorFeed />} />
+                    <Route path="/patient/feed" element={<Feed />} />
                 </Route>
             </Route>
 
