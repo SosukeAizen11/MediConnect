@@ -19,3 +19,8 @@ export const getMyPatients = async () => {
     const response = await apiClient.get('/doctors/my-patients');
     return response.data;
 };
+
+export const getDashboardStats = async () => {
+    const response = await apiClient.get('/doctors/dashboard');
+    return response.data;
+};

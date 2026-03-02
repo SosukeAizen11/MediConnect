@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../../context/AuthContext';
+import { getDashboardStats } from '../../api/doctor.api';
 import {
     CalendarCheck,
     Clock,
@@ -15,13 +17,32 @@ function DoctorDashboard() {
     const navigate = useNavigate();
     const { user } = useAuthContext();
 
-    // Placeholder data — ready for API integration
-    const kpiData = {
+    const [kpiData, setKpiData] = useState({
         todayAppointments: 0,
         pendingAppointments: 0,
         activeTokens: 0,
         totalPosts: 0,
-    };
+    });
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await getDashboardStats();
+                if (res.success) {
+                    setKpiData({
+                        totalPosts: res.totalPosts || 0,
+                        todayAppointments: res.todayAppointments || 0,
+                        pendingAppointments: res.pendingAppointments || 0,
+                        activeTokens: res.activeTokens || 0,
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to load dashboard stats", err);
+            }
+        };
+
+        fetchStats();
+    }, []);
 
     const upcomingAppointments = [];
 

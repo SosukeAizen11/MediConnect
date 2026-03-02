@@ -2,6 +2,7 @@ import Doctor from '../models/doctor.model.js';
 import Clinic from '../models/clinic.model.js';
 import Appointment from '../models/appointment.model.js';
 import Token from '../models/token.model.js';
+import DoctorPost from '../models/post.model.js';
 
 export const createDoctorProfile = async (req, res, next) => {
     try {
@@ -201,6 +202,55 @@ export const getMyPatients = async (req, res, next) => {
             count: patients.length,
             data: patients,
         });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getDashboardStats = async (req, res, next) => {
+    try {
+        const doctorDoc = await Doctor.findOne({ user: req.user._id });
+        if (!doctorDoc) {
+            return res.status(404).json({ success: false, message: 'Doctor profile not found' });
+        }
+
+        const doctorId = doctorDoc._id;
+
+        // 1. Total Posts
+        const totalPosts = await DoctorPost.countDocuments({ author: req.user._id });
+
+        // 2. Today's Appointments
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        const todayAppointments = await Appointment.countDocuments({
+            doctor: doctorId,
+            date: { $gte: today, $lt: tomorrow }
+        });
+
+        // 3. Pending Appointments
+        const pendingAppointments = await Appointment.countDocuments({
+            doctor: doctorId,
+            status: "PENDING"
+        });
+
+        // 4. Active Tokens
+        const activeTokens = await Token.countDocuments({
+            doctor: doctorId,
+            status: "WAITING"
+        });
+
+        res.status(200).json({
+            success: true,
+            totalPosts,
+            todayAppointments,
+            pendingAppointments,
+            activeTokens
+        });
+
     } catch (error) {
         next(error);
     }
