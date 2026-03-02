@@ -41,7 +41,7 @@ function TokenDisplay() {
     useEffect(() => {
         // Initialize socket connection to the backend
         // Make sure the port matches the backend environment variable
-        const socket = io(import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:5001');
+        const socket = io(import.meta.env.VITE_API_URL?.replace('/api/v1', ''));
 
         socket.on('connect', () => {
             setIsConnected(true);
