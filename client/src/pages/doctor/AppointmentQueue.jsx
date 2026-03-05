@@ -47,7 +47,7 @@ function AppointmentQueue() {
         try {
             setError(null);
             const res = await getDoctorAppointments();
-            setAppointments(res.data);
+            setAppointments(res.appointments || res.data || []);
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to load appointments');
         } finally {
@@ -224,7 +224,7 @@ function AppointmentQueue() {
                                         <button
                                             disabled={isUpdating}
                                             onClick={() =>
-                                                navigate(`/doctor/consult/${apt._id}`)
+                                                navigate(`/doctor/appointment-consult/${apt._id}`)
                                             }
                                             className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                         >

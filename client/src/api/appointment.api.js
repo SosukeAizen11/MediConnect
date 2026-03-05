@@ -20,6 +20,11 @@ export const updateAppointmentStatus = async (id, status) => {
     return response.data;
 };
 
+export const patchAppointmentStatus = async (id, status) => {
+    const response = await apiClient.patch(`/appointments/${id}/status`, { status });
+    return response.data;
+};
+
 export const completeConsultation = async (id, data) => {
     const response = await apiClient.put(`/appointments/${id}/consult`, data);
     return response.data;

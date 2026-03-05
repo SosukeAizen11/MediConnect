@@ -9,6 +9,9 @@ import tokenRoutes from './routes/token.routes.js';
 import patientRoutes from './routes/patient.routes.js';
 import postRoutes from './routes/post.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import doctorAvailabilityRoutes from "./routes/doctorAvailability.routes.js";
+import slotRoutes from "./routes/slot.routes.js";
+import leaveRoutes from "./routes/leave.routes.js";
 import notFound from './middleware/notFound.js';
 import errorHandler from './middleware/errorHandler.js';
 
@@ -28,6 +31,9 @@ app.use('/api/v1/tokens', tokenRoutes);
 app.use('/api/v1/patient', patientRoutes);
 app.use('/api/v1/posts', postRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use("/api/v1/availability", doctorAvailabilityRoutes);
+app.use("/api/v1/slots", slotRoutes);
+app.use("/api/v1/leaves", leaveRoutes);
 
 // Middleware
 app.use(notFound);

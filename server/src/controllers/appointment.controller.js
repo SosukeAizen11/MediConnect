@@ -1,43 +1,78 @@
 import Appointment from '../models/appointment.model.js';
 import Doctor from '../models/doctor.model.js';
 import Clinic from '../models/clinic.model.js';
+import DoctorAvailability from '../models/doctorAvailability.model.js';
+import DoctorLeave from '../models/doctorLeave.model.js';
+import { generateSlots } from '../utils/slotGenerator.js';
 
 export const bookAppointment = async (req, res, next) => {
     try {
-        const { doctor, clinic, date, time } = req.body;
+        const { doctorId, date, time } = req.body;
 
-        if (!doctor || !clinic || !date || !time) {
+        if (!doctorId || !date || !time) {
             res.status(400);
-            return next(new Error('Please provide doctor, clinic, date, and time'));
+            return next(new Error('Please provide doctorId, date, and time'));
         }
 
-        // Check clinic exists and is of type APPOINTMENT
-        const clinicDoc = await Clinic.findById(clinic);
-        if (!clinicDoc) {
-            res.status(404);
-            return next(new Error('Clinic not found'));
+        // Resolve doctorId — could be Doctor profile _id or User _id
+        let userIdForAvailability = doctorId;
+        let doctorProfile = await Doctor.findById(doctorId);
+
+        if (doctorProfile) {
+            // doctorId is a Doctor profile _id → use its user field
+            userIdForAvailability = doctorProfile.user.toString();
+        } else {
+            // doctorId might be a User _id — look up Doctor profile by user
+            doctorProfile = await Doctor.findOne({ user: doctorId });
+            if (!doctorProfile) {
+                res.status(404);
+                return next(new Error('Doctor profile not found'));
+            }
         }
 
-        if (clinicDoc.clinicType !== 'APPOINTMENT') {
+        // 0.5 Check if doctor is on leave
+        const leave = await DoctorLeave.findOne({
+            doctor: userIdForAvailability,
+            date,
+        });
+
+        if (leave) {
             res.status(400);
-            return next(new Error('This clinic does not support appointments'));
+            return next(new Error('Doctor is on leave on this date'));
         }
 
-        // Check doctor exists and belongs to the clinic
-        const doctorDoc = await Doctor.findById(doctor);
-        if (!doctorDoc) {
-            res.status(404);
-            return next(new Error('Doctor not found'));
-        }
+        // 1. Check doctor availability for this day
+        const [year, month, day] = date.split('-').map(Number);
+        const dayOfWeek = new Date(year, month - 1, day).getDay();
+        const availability = await DoctorAvailability.findOne({
+            doctor: userIdForAvailability,
+            dayOfWeek,
+            isActive: true,
+        });
 
-        if (doctorDoc.clinic.toString() !== clinic) {
+        if (!availability) {
             res.status(400);
-            return next(new Error('Doctor does not belong to this clinic'));
+            return next(new Error('Doctor is not available on this day'));
         }
 
-        // Check for double booking
+        // 2. Generate valid slots and check if requested time is valid
+        const validSlots = generateSlots(
+            availability.startTime,
+            availability.endTime,
+            availability.slotDuration
+        );
+
+        if (!validSlots.includes(time)) {
+            res.status(400);
+            return next(new Error('Invalid time slot'));
+        }
+
+        // 3. Check if slot is already booked (match both IDs)
         const existingAppointment = await Appointment.findOne({
-            doctor,
+            $or: [
+                { doctor: doctorId },
+                { doctor: userIdForAvailability }
+            ],
             date,
             time,
             status: { $ne: 'CANCELLED' },
@@ -45,20 +80,29 @@ export const bookAppointment = async (req, res, next) => {
 
         if (existingAppointment) {
             res.status(400);
-            return next(new Error('This time slot is already booked'));
+            return next(new Error('Slot already booked'));
         }
 
+        if (!doctorProfile.clinic) {
+            res.status(400);
+            return next(new Error('Doctor is not associated with any clinic'));
+        }
+
+        // 5. Create appointment
         const appointment = await Appointment.create({
-            patient: req.user._id,
-            doctor,
-            clinic,
+            patient: req.user._id || req.user.id,
+            doctor: doctorProfile._id,
+            clinic: doctorProfile.clinic,
             date,
             time,
+            status: 'CONFIRMED',
         });
 
+        // 6. Return response
         res.status(201).json({
             success: true,
-            data: appointment,
+            message: 'Appointment booked successfully',
+            appointment,
         });
     } catch (error) {
         next(error);
@@ -87,23 +131,31 @@ export const getPatientAppointments = async (req, res, next) => {
 
 export const getDoctorAppointments = async (req, res, next) => {
     try {
+        const doctorId = req.user._id || req.user.id;
+
         // Find doctor profile for logged-in user
-        let doctorDoc = await Doctor.findOne({ user: req.user._id });
+        let doctorDoc = await Doctor.findOne({ user: doctorId });
 
         // Lazy creation: auto-create profile if missing
         if (!doctorDoc) {
-            doctorDoc = await Doctor.create({ user: req.user._id });
+            doctorDoc = await Doctor.create({ user: doctorId });
         }
 
-        const appointments = await Appointment.find({ doctor: doctorDoc._id })
+        // Query appointments where doctor is either the Doctor profile _id
+        // or the User _id (for slot-based bookings)
+        const appointments = await Appointment.find({
+            $or: [
+                { doctor: doctorDoc._id },
+                { doctor: doctorId }
+            ]
+        })
             .populate('patient', 'name email phone')
             .populate('clinic', 'name address')
             .sort({ date: 1, time: 1 });
 
         res.status(200).json({
             success: true,
-            count: appointments.length,
-            data: appointments,
+            appointments,
         });
     } catch (error) {
         next(error);
@@ -115,9 +167,9 @@ export const updateAppointmentStatus = async (req, res, next) => {
         const { id } = req.params;
         const { status } = req.body;
 
-        if (!status || !['COMPLETED', 'CANCELLED'].includes(status)) {
+        if (!status || !['CONFIRMED', 'COMPLETED', 'CANCELLED'].includes(status)) {
             res.status(400);
-            return next(new Error('Status must be COMPLETED or CANCELLED'));
+            return next(new Error('Status must be CONFIRMED, COMPLETED, or CANCELLED'));
         }
 
         // Find doctor profile for logged-in user
@@ -178,9 +230,9 @@ export const completeConsultation = async (req, res, next) => {
             return next(new Error('Not authorized to update this appointment'));
         }
 
-        if (appointment.status !== 'BOOKED') {
+        if (!['BOOKED', 'CONFIRMED'].includes(appointment.status)) {
             res.status(400);
-            return next(new Error('Can only complete a BOOKED appointment'));
+            return next(new Error('Can only complete a BOOKED or CONFIRMED appointment'));
         }
 
         appointment.diagnosis = diagnosis;

@@ -16,6 +16,7 @@ router.post('/', protect, authorize('PATIENT'), bookAppointment);
 router.get('/patient', protect, authorize('PATIENT'), getPatientAppointments);
 router.get('/doctor', protect, authorize('DOCTOR'), getDoctorAppointments);
 router.put('/:id/status', protect, authorize('DOCTOR'), updateAppointmentStatus);
+router.patch('/:id/status', protect, authorize('DOCTOR'), updateAppointmentStatus);
 router.put('/:id/consult', protect, authorize('DOCTOR'), completeConsultation);
 router.get('/:id/details', protect, authorize('DOCTOR'), getAppointmentDetails);
 

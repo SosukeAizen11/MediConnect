@@ -14,7 +14,9 @@ import {
     X,
     Building2,
     Loader2,
-    AlertCircle
+    AlertCircle,
+    CalendarCheck,
+    Clock,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getDoctorProfile } from '../api/doctor.api';
@@ -80,6 +82,8 @@ function DoctorLayout() {
     } else {
         navItems = [
             { path: '/doctor/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+            { path: '/doctor/appointments', label: 'Appointments', icon: CalendarCheck },
+            { path: '/doctor/availability', label: 'Availability', icon: Clock },
             { path: '/doctor/queue', label: 'Appointments Queue', icon: ListOrdered },
             { path: '/doctor/token-queue', label: 'Token Queue', icon: Hash },
             { path: '/doctor/patients', label: 'My Patients', icon: Users },

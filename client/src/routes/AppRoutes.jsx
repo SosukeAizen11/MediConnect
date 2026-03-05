@@ -32,6 +32,9 @@ import MyPatients from '../pages/doctor/MyPatients';
 import CreatePost from '../pages/doctor/CreatePost';
 import MyPosts from '../pages/doctor/MyPosts';
 import RegisterClinic from '../pages/doctor/RegisterClinic';
+import DoctorAppointments from '../pages/doctor/Appointments';
+import DoctorAvailability from '../pages/doctor/Availability';
+import AppointmentConsult from '../pages/doctor/AppointmentConsult';
 import AdminDashboard from '../pages/dashboards/AdminDashboard';
 import ClinicApprovals from '../pages/admin/ClinicApprovals';
 import AllClinics from '../pages/admin/AllClinics';
@@ -98,6 +101,9 @@ function AppRoutes() {
                     <Route path="/doctor/create-post" element={<CreatePost />} />
                     <Route path="/doctor/posts" element={<MyPosts />} />
                     <Route path="/doctor/profile" element={<DoctorProfile />} />
+                    <Route path="/doctor/appointments" element={<DoctorAppointments />} />
+                    <Route path="/doctor/availability" element={<DoctorAvailability />} />
+                    <Route path="/doctor/appointment-consult/:appointmentId" element={<AppointmentConsult />} />
                 </Route>
             </Route>
 
