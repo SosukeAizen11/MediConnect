@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getTokenDetails, completeTokenConsultation } from '../../api/token.api';
+import { getPatientReports } from '../../api/report.api';
 import {
     Hash,
     User,
@@ -31,6 +32,7 @@ function TokenConsultation() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
     const [toast, setToast] = useState(null);
+    const [patientReports, setPatientReports] = useState([]);
 
     const [formData, setFormData] = useState({
         diagnosis: '',
@@ -57,6 +59,20 @@ function TokenConsultation() {
         const timer = setTimeout(() => setToast(null), 3000);
         return () => clearTimeout(timer);
     }, [toast]);
+
+    useEffect(() => {
+        const fetchReports = async () => {
+            if (data?.token?.patient?._id) {
+                try {
+                    const res = await getPatientReports(data.token.patient._id);
+                    setPatientReports(res.reports || []);
+                } catch (err) {
+                    console.error('Failed to fetch patient reports', err);
+                }
+            }
+        };
+        fetchReports();
+    }, [data?.token?.patient?._id]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -279,6 +295,45 @@ function TokenConsultation() {
                                                 Dx: {past.diagnosis}
                                             </p>
                                         )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Patient Reports */}
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                        <div className="px-6 py-4 bg-gray-50 border-b border-gray-100">
+                            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                                <FileText className="w-4 h-4" />
+                                Patient Reports ({patientReports.length})
+                            </h2>
+                        </div>
+                        {patientReports.length === 0 ? (
+                            <div className="p-6 text-center">
+                                <FileText className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+                                <p className="text-gray-400 text-sm">No reports uploaded by patient.</p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
+                                {patientReports.map((report) => (
+                                    <div key={report._id} className="px-6 py-3">
+                                        <div className="flex items-center justify-between">
+                                            <div className="min-w-0 pr-4">
+                                                <p className="text-sm font-medium text-gray-800 truncate" title={report.title}>
+                                                    {report.title}
+                                                </p>
+                                                <p className="text-xs text-gray-500 mt-0.5">
+                                                    Uploaded: {new Date(report.uploadedAt).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                            <button
+                                                onClick={() => window.open(report.fileUrl, '_blank')}
+                                                className="shrink-0 text-xs bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg font-medium border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                                            >
+                                                View
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>

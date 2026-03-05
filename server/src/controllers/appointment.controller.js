@@ -3,7 +3,11 @@ import Doctor from '../models/doctor.model.js';
 import Clinic from '../models/clinic.model.js';
 import DoctorAvailability from '../models/doctorAvailability.model.js';
 import DoctorLeave from '../models/doctorLeave.model.js';
+import User from '../models/user.model.js';
 import { generateSlots } from '../utils/slotGenerator.js';
+import { generatePrescriptionPDF } from '../utils/generatePrescription.js';
+import cloudinary from '../config/cloudinary.js';
+import streamifier from 'streamifier';
 
 export const bookAppointment = async (req, res, next) => {
     try {
@@ -233,6 +237,47 @@ export const completeConsultation = async (req, res, next) => {
         if (!['BOOKED', 'CONFIRMED'].includes(appointment.status)) {
             res.status(400);
             return next(new Error('Can only complete a BOOKED or CONFIRMED appointment'));
+        }
+
+        // Generate PDF
+        try {
+            const patientObj = await User.findById(appointment.patient);
+            const patientName = patientObj?.name || 'Patient';
+            const docName = req.user.name || 'Doctor';
+
+            const pdfBuffer = await generatePrescriptionPDF({
+                patientName,
+                doctorName: `Dr. ${docName}`,
+                diagnosis,
+                prescription: prescription || '',
+                notes: consultationNotes || '',
+                date: appointment.date
+            });
+
+            // Upload PDF to Cloudinary
+            const uploadToCloudinary = (buffer) => {
+                return new Promise((resolve, reject) => {
+                    const stream = cloudinary.uploader.upload_stream(
+                        {
+                            folder: "mediconnect/prescriptions",
+                            resource_type: "auto",
+                            type: "upload"
+                        },
+                        (error, result) => {
+                            if (error) reject(error);
+                            else resolve(result);
+                        }
+                    );
+                    streamifier.createReadStream(buffer).pipe(stream);
+                });
+            };
+
+            const cloudinaryResult = await uploadToCloudinary(pdfBuffer);
+            appointment.prescriptionUrl = cloudinaryResult.secure_url;
+
+        } catch (pdfError) {
+            console.error('Failed to generate or upload Prescription PDF:', pdfError);
+            // Non-blocking error, we still complete the consultation
         }
 
         appointment.diagnosis = diagnosis;

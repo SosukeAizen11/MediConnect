@@ -44,6 +44,10 @@ const appointmentSchema = new mongoose.Schema({
         trim: true,
         default: '',
     },
+    prescriptionUrl: {
+        type: String,
+        default: '',
+    },
     createdAt: {
         type: Date,
         default: Date.now,

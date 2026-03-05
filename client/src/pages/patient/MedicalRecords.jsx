@@ -1,80 +1,136 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
     FileText,
     Upload,
     File,
     Image,
     Calendar,
-    Download,
     Eye,
+    Trash2,
     Loader2,
     CheckCircle,
     AlertCircle,
     X,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { uploadReport, getMyReports, deleteReport } from '../../api/report.api';
 
 function MedicalRecords() {
-    const [records, setRecords] = useState([]);
+    const navigate = useNavigate();
+    const [reports, setReports] = useState([]);
+    const [loadingReports, setLoadingReports] = useState(true);
     const [selectedFile, setSelectedFile] = useState(null);
-    const [description, setDescription] = useState('');
+    const [title, setTitle] = useState('');
     const [uploading, setUploading] = useState(false);
-    const [uploadSuccess, setUploadSuccess] = useState(false);
-    const [error, setError] = useState('');
+    const [deletingId, setDeletingId] = useState(null);
+    const [toast, setToast] = useState(null);
 
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+
+    const fetchReports = useCallback(async () => {
+        try {
+            setLoadingReports(true);
+            const res = await getMyReports();
+            setReports(res.reports || []);
+        } catch (error) {
+            setToast({
+                type: 'error',
+                message: error.response?.data?.message || 'Failed to fetch reports',
+            });
+        } finally {
+            setLoadingReports(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchReports();
+    }, [fetchReports]);
+
+    useEffect(() => {
+        if (!toast) return;
+        const timer = setTimeout(() => setToast(null), 3000);
+        return () => clearTimeout(timer);
+    }, [toast]);
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (file) {
             if (!allowedTypes.includes(file.type)) {
-                setError('Please upload PDF, JPG, or PNG files only');
+                setToast({ type: 'error', message: 'Please upload PDF, JPG, or PNG files only' });
                 setSelectedFile(null);
+                e.target.value = ''; // reset
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                setToast({ type: 'error', message: 'File size must be less than 10MB' });
+                setSelectedFile(null);
+                e.target.value = ''; // reset
                 return;
             }
             setSelectedFile(file);
-            setError('');
         }
     };
 
     const handleUpload = async (e) => {
         e.preventDefault();
         if (!selectedFile) {
-            setError('Please select a file to upload');
+            setToast({ type: 'error', message: 'Please select a file to upload' });
+            return;
+        }
+        if (!title.trim()) {
+            setToast({ type: 'error', message: 'Please enter a report title' });
             return;
         }
 
         setUploading(true);
-        setError('');
 
-        // Simulate upload delay
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('file', selectedFile);
 
-        const newRecord = {
-            id: Date.now(),
-            fileName: selectedFile.name,
-            fileType: selectedFile.type,
-            fileSize: selectedFile.size,
-            description: description || 'No description',
-            uploadDate: new Date().toISOString(),
-        };
+        try {
+            await uploadReport(formData);
+            setToast({ type: 'success', message: 'Report uploaded successfully' });
 
-        setRecords([newRecord, ...records]);
-        setSelectedFile(null);
-        setDescription('');
-        setUploading(false);
-        setUploadSuccess(true);
+            // Reset form
+            setSelectedFile(null);
+            setTitle('');
+            const fileInput = document.getElementById('file-input');
+            if (fileInput) fileInput.value = '';
 
-        // Clear success message after 3 seconds
-        setTimeout(() => setUploadSuccess(false), 3000);
+            // Map data
+            await fetchReports();
+        } catch (error) {
+            setToast({
+                type: 'error',
+                message: error.response?.data?.message || 'Failed to upload report',
+            });
+        } finally {
+            setUploading(false);
+        }
+    };
 
-        // Reset file input
-        const fileInput = document.getElementById('file-input');
-        if (fileInput) fileInput.value = '';
+    const handleDelete = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this report?')) return;
+
+        setDeletingId(id);
+        try {
+            await deleteReport(id);
+            setToast({ type: 'success', message: 'Report deleted successfully' });
+            await fetchReports();
+        } catch (error) {
+            setToast({
+                type: 'error',
+                message: error.response?.data?.message || 'Failed to delete report',
+            });
+        } finally {
+            setDeletingId(null);
+        }
     };
 
     const getFileIcon = (type) => {
-        if (type === 'application/pdf') return File;
-        if (type.startsWith('image/')) return Image;
+        if (type === 'pdf') return File;
+        if (['jpg', 'jpeg', 'png'].includes(type)) return Image;
         return FileText;
     };
 
@@ -86,17 +142,28 @@ function MedicalRecords() {
         });
     };
 
-    const formatFileSize = (bytes) => {
-        if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    };
-
     return (
         <div className="space-y-6">
+            {/* Toast */}
+            {toast && (
+                <div
+                    className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-lg shadow-lg border text-sm font-medium ${toast.type === 'success'
+                        ? 'bg-green-50 border-green-200 text-green-700'
+                        : 'bg-red-50 border-red-200 text-red-700'
+                        }`}
+                >
+                    {toast.type === 'success' ? (
+                        <CheckCircle className="w-5 h-5" />
+                    ) : (
+                        <AlertCircle className="w-5 h-5" />
+                    )}
+                    {toast.message}
+                </div>
+            )}
+
             {/* Page Header */}
             <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                <h1 className="text-2xl font-bold text-gray-800">Medical Records</h1>
+                <h1 className="text-2xl font-bold text-gray-800">Medical Reports</h1>
                 <p className="text-gray-600 mt-1">
                     Upload and manage your medical documents
                 </p>
@@ -104,23 +171,25 @@ function MedicalRecords() {
 
             {/* Upload Section */}
             <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">Upload New Record</h2>
-
-                {uploadSuccess && (
-                    <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                        <p className="text-sm text-green-700">Record uploaded successfully!</p>
-                    </div>
-                )}
-
-                {error && (
-                    <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-                        <AlertCircle className="w-5 h-5 text-red-600" />
-                        <p className="text-sm text-red-700">{error}</p>
-                    </div>
-                )}
+                <h2 className="text-lg font-semibold text-gray-800 mb-4">Upload New Report</h2>
 
                 <form onSubmit={handleUpload} className="space-y-4">
+                    {/* Title */}
+                    <div>
+                        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+                            Report Title <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="title"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            placeholder="e.g., Blood test report, X-ray scan..."
+                            className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            required
+                        />
+                    </div>
+
                     {/* File Input */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -142,7 +211,7 @@ function MedicalRecords() {
                                 <span className="text-sm text-gray-600">
                                     {selectedFile
                                         ? selectedFile.name
-                                        : 'Click to upload PDF, JPG, or PNG'}
+                                        : 'Click to upload PDF, JPG, or PNG (Max 10MB)'}
                                 </span>
                             </label>
                         </div>
@@ -151,9 +220,6 @@ function MedicalRecords() {
                                 <div className="flex items-center gap-2">
                                     <File className="w-4 h-4 text-gray-500" />
                                     <span className="text-sm text-gray-700">{selectedFile.name}</span>
-                                    <span className="text-xs text-gray-500">
-                                        ({formatFileSize(selectedFile.size)})
-                                    </span>
                                 </div>
                                 <button
                                     type="button"
@@ -162,33 +228,18 @@ function MedicalRecords() {
                                         const fileInput = document.getElementById('file-input');
                                         if (fileInput) fileInput.value = '';
                                     }}
-                                    className="p-1 hover:bg-gray-200 rounded"
+                                    className="p-1 hover:bg-gray-200 text-gray-500 hover:text-red-500 rounded"
                                 >
-                                    <X className="w-4 h-4 text-gray-500" />
+                                    <X className="w-4 h-4" />
                                 </button>
                             </div>
                         )}
                     </div>
 
-                    {/* Description */}
-                    <div>
-                        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-                            Description <span className="text-gray-400">(Optional)</span>
-                        </label>
-                        <input
-                            type="text"
-                            id="description"
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            placeholder="e.g., Blood test report, X-ray scan..."
-                            className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                    </div>
-
                     {/* Upload Button */}
                     <button
                         type="submit"
-                        disabled={uploading || !selectedFile}
+                        disabled={uploading || !selectedFile || !title.trim()}
                         className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
                     >
                         {uploading ? (
@@ -199,7 +250,7 @@ function MedicalRecords() {
                         ) : (
                             <>
                                 <Upload className="w-5 h-5" />
-                                Upload Record
+                                Upload Report
                             </>
                         )}
                     </button>
@@ -208,9 +259,13 @@ function MedicalRecords() {
 
             {/* Records List */}
             <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">Your Records</h2>
+                <h2 className="text-lg font-semibold text-gray-800 mb-4">Your Reports</h2>
 
-                {records.length === 0 ? (
+                {loadingReports ? (
+                    <div className="flex justify-center p-8">
+                        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                    </div>
+                ) : reports.length === 0 ? (
                     <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200">
                         <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                         <p className="text-gray-600 font-medium">No medical records uploaded yet</p>
@@ -220,42 +275,50 @@ function MedicalRecords() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {records.map((record) => {
-                            const FileIcon = getFileIcon(record.fileType);
+                        {reports.map((report) => {
+                            const FileIcon = getFileIcon(report.fileType);
+                            const isDeleting = deletingId === report._id;
+
                             return (
                                 <div
-                                    key={record.id}
-                                    className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
+                                    key={report._id}
+                                    className="p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
                                 >
                                     <div className="flex items-start gap-3 mb-3">
                                         <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
                                             <FileIcon className="w-5 h-5 text-blue-600" />
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            <p className="font-medium text-gray-800 truncate">
-                                                {record.fileName}
-                                            </p>
-                                            <p className="text-xs text-gray-500 truncate">
-                                                {record.description}
+                                            <p className="font-medium text-gray-800 truncate" title={report.title}>
+                                                {report.title}
                                             </p>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
+                                    <div className="flex items-center gap-2 text-xs text-gray-500 mb-4">
                                         <Calendar className="w-3.5 h-3.5" />
-                                        <span>{formatDate(record.uploadDate)}</span>
-                                        <span>•</span>
-                                        <span>{formatFileSize(record.fileSize)}</span>
+                                        <span>Uploaded: {formatDate(report.uploadedAt)}</span>
                                     </div>
 
                                     <div className="flex gap-2">
-                                        <button className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                                        <button
+                                            onClick={() => navigate(`/report-viewer?url=${encodeURIComponent(report.fileUrl)}`)}
+                                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-blue-600 border border-blue-200 bg-white rounded-lg hover:bg-blue-50 transition-colors"
+                                        >
                                             <Eye className="w-3.5 h-3.5" />
                                             View
                                         </button>
-                                        <button className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
-                                            <Download className="w-3.5 h-3.5" />
-                                            Download
+                                        <button
+                                            onClick={() => handleDelete(report._id)}
+                                            disabled={isDeleting}
+                                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-red-600 border border-red-200 bg-white rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                                        >
+                                            {isDeleting ? (
+                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                            ) : (
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            )}
+                                            Delete
                                         </button>
                                     </div>
                                 </div>

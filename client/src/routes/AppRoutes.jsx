@@ -35,10 +35,12 @@ import RegisterClinic from '../pages/doctor/RegisterClinic';
 import DoctorAppointments from '../pages/doctor/Appointments';
 import DoctorAvailability from '../pages/doctor/Availability';
 import AppointmentConsult from '../pages/doctor/AppointmentConsult';
+import PrescriptionPreview from '../pages/doctor/PrescriptionPreview';
 import AdminDashboard from '../pages/dashboards/AdminDashboard';
 import ClinicApprovals from '../pages/admin/ClinicApprovals';
 import AllClinics from '../pages/admin/AllClinics';
 import Users from '../pages/admin/Users';
+import ReportViewer from '../pages/common/ReportViewer';
 
 const getRedirectPath = (role) => {
     switch (role) {
@@ -65,6 +67,9 @@ function AppRoutes() {
 
             {/* Public TV Token Display */}
             <Route path="/display/:clinicId" element={<TokenDisplay />} />
+
+            {/* General App Viewer Route */}
+            <Route path="/report-viewer" element={<ReportViewer />} />
 
             {/* Patient Routes with PatientLayout */}
             <Route
@@ -104,6 +109,7 @@ function AppRoutes() {
                     <Route path="/doctor/appointments" element={<DoctorAppointments />} />
                     <Route path="/doctor/availability" element={<DoctorAvailability />} />
                     <Route path="/doctor/appointment-consult/:appointmentId" element={<AppointmentConsult />} />
+                    <Route path="/doctor/prescription/:appointmentId" element={<PrescriptionPreview />} />
                 </Route>
             </Route>
 

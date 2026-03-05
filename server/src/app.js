@@ -12,6 +12,7 @@ import adminRoutes from './routes/admin.routes.js';
 import doctorAvailabilityRoutes from "./routes/doctorAvailability.routes.js";
 import slotRoutes from "./routes/slot.routes.js";
 import leaveRoutes from "./routes/leave.routes.js";
+import reportRoutes from "./routes/report.routes.js";
 import notFound from './middleware/notFound.js';
 import errorHandler from './middleware/errorHandler.js';
 
@@ -34,6 +35,7 @@ app.use('/api/v1/admin', adminRoutes);
 app.use("/api/v1/availability", doctorAvailabilityRoutes);
 app.use("/api/v1/slots", slotRoutes);
 app.use("/api/v1/leaves", leaveRoutes);
+app.use("/api/v1/reports", reportRoutes);
 
 // Middleware
 app.use(notFound);
