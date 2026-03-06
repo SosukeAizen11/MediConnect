@@ -1,4 +1,6 @@
 import User from '../models/user.model.js';
+import Appointment from '../models/appointment.model.js';
+import Report from '../models/report.model.js';
 
 // Get patient profile
 export const getProfile = async (req, res) => {
@@ -63,6 +65,73 @@ export const updateProfile = async (req, res) => {
         });
     } catch (error) {
         console.error('Update profile error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// Get dashboard stats
+export const getDashboardStats = async (req, res) => {
+    try {
+        const patientId = req.user._id;
+
+        // Date format is YYYY-MM-DD string
+        const todayString = new Date().toISOString().split('T')[0];
+
+        // 1. Total Appointments
+        const totalAppointments = await Appointment.countDocuments({ patient: patientId });
+
+        // 2. Upcoming Appointments (count)
+        const upcomingAppointments = await Appointment.countDocuments({
+            patient: patientId,
+            status: { $in: ['BOOKED', 'CONFIRMED'] },
+            date: { $gte: todayString }
+        });
+
+        // 3. Medical Records
+        const medicalRecords = await Report.countDocuments({ patient: patientId });
+
+        // 4. Notifications
+        const notifications = 0; // Placeholder as Notifications model does not exist
+
+        // Fetch upcoming appointments list
+        const upcomingAppointmentsList = await Appointment.find({
+            patient: patientId,
+            status: { $in: ['BOOKED', 'CONFIRMED'] },
+            date: { $gte: todayString }
+        })
+            .populate('doctor', 'user')
+            .populate({
+                path: 'doctor',
+                populate: {
+                    path: 'user',
+                    select: 'name'
+                }
+            })
+            .populate('clinic', 'name')
+            .sort({ date: 1, time: 1 })
+            .limit(5);
+
+        // Format appointments list
+        const formattedAppointments = upcomingAppointmentsList.map(apt => ({
+            doctorName: apt.doctor?.user?.name || 'Unknown Doctor',
+            clinicName: apt.clinic?.name || 'Unknown Clinic',
+            date: apt.date,
+            time: apt.time
+        }));
+
+        res.status(200).json({
+            success: true,
+            kpiData: {
+                totalAppointments,
+                upcomingAppointments,
+                medicalRecords,
+                notifications
+            },
+            upcomingAppointments: formattedAppointments
+        });
+
+    } catch (error) {
+        console.error('Get dashboard stats error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

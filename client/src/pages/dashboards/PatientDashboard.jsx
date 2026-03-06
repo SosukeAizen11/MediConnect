@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMyToken } from '../../api/token.api';
+import { getDashboardStats } from '../../api/patient.api';
 import {
     CalendarCheck,
     Clock,
@@ -20,6 +21,14 @@ function PatientDashboard() {
     const [tokenData, setTokenData] = useState(null);
     const [tokenLoading, setTokenLoading] = useState(true);
 
+    const [kpiData, setKpiData] = useState({
+        totalAppointments: 0,
+        upcomingAppointments: 0,
+        medicalRecords: 0,
+        notifications: 0,
+    });
+    const [upcomingAppointments, setUpcomingAppointments] = useState([]);
+
     useEffect(() => {
         const fetchTokenStatus = async () => {
             try {
@@ -32,18 +41,23 @@ function PatientDashboard() {
             }
         };
 
+        const fetchDashboardData = async () => {
+            try {
+                const res = await getDashboardStats();
+                if (res.success) {
+                    setKpiData(res.kpiData);
+                    setUpcomingAppointments(res.upcomingAppointments || []);
+                }
+            } catch (err) {
+                console.error('Failed to fetch dashboard stats:', err);
+            }
+        };
+
         fetchTokenStatus();
+        fetchDashboardData();
     }, []);
 
-    // Placeholder data - ready for API integration
-    const kpiData = {
-        totalAppointments: 0,
-        upcomingAppointments: 0,
-        medicalRecords: 0,
-        notifications: 0,
-    };
 
-    const upcomingAppointments = [];
 
     const kpiCards = [
         {

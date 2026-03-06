@@ -220,28 +220,33 @@ export const getDashboardStats = async (req, res, next) => {
         const totalPosts = await DoctorPost.countDocuments({ author: req.user._id });
 
         // 2. Today's Appointments
+        // Date in Appointment model is stored as a string "YYYY-MM-DD"
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
+        const dateString = today.toISOString().split('T')[0];
 
         const todayAppointments = await Appointment.countDocuments({
             doctor: doctorId,
-            date: { $gte: today, $lt: tomorrow }
+            date: dateString
         });
 
         // 3. Pending Appointments
         const pendingAppointments = await Appointment.countDocuments({
             doctor: doctorId,
-            status: "PENDING"
+            status: { $in: ['BOOKED', 'CONFIRMED'] }
         });
 
         // 4. Active Tokens
-        const activeTokens = await Token.countDocuments({
-            doctor: doctorId,
-            status: "WAITING"
-        });
+        let activeTokens = 0;
+        if (doctorDoc.clinic) {
+            const todayDate = new Date();
+            todayDate.setHours(0, 0, 0, 0);
+
+            activeTokens = await Token.countDocuments({
+                clinic: doctorDoc.clinic,
+                date: todayDate,
+                status: 'WAITING'
+            });
+        }
 
         res.status(200).json({
             success: true,

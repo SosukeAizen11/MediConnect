@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../../context/AuthContext';
 import { getDashboardStats } from '../../api/doctor.api';
+import { getDoctorAppointments } from '../../api/appointment.api';
 import {
     CalendarCheck,
     Clock,
@@ -23,6 +24,7 @@ function DoctorDashboard() {
         activeTokens: 0,
         totalPosts: 0,
     });
+    const [upcomingAppointments, setUpcomingAppointments] = useState([]);
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -36,15 +38,30 @@ function DoctorDashboard() {
                         activeTokens: res.activeTokens || 0,
                     });
                 }
+
+                // Fetch upcoming appointments
+                const aptRes = await getDoctorAppointments();
+                if (aptRes.success && aptRes.data) {
+                    // Filter for future/today valid appointments
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const validApts = aptRes.data
+                        .filter(apt => ['BOOKED', 'CONFIRMED'].includes(apt.status) && apt.date >= todayStr)
+                        .slice(0, 5)
+                        .map(apt => ({
+                            patientName: apt.patient?.name || 'Unknown Patient',
+                            reason: apt.diagnosis || 'Consultation',
+                            date: apt.date,
+                            time: apt.time
+                        }));
+                    setUpcomingAppointments(validApts);
+                }
             } catch (err) {
-                console.error("Failed to load dashboard stats", err);
+                console.error("Failed to load dashboard data", err);
             }
         };
 
         fetchStats();
     }, []);
-
-    const upcomingAppointments = [];
 
     const kpiCards = [
         {
@@ -256,15 +273,15 @@ function DoctorDashboard() {
                         <div className="space-y-2">
                             <div className="flex items-center justify-between text-sm">
                                 <span className="text-gray-500">Consultations</span>
-                                <span className="font-medium text-gray-800">0</span>
+                                <span className="font-medium text-gray-800">{kpiData.todayAppointments}</span>
                             </div>
                             <div className="flex items-center justify-between text-sm">
                                 <span className="text-gray-500">Patients Seen</span>
-                                <span className="font-medium text-gray-800">0</span>
+                                <span className="font-medium text-gray-800">-</span>
                             </div>
                             <div className="flex items-center justify-between text-sm">
                                 <span className="text-gray-500">Tokens Processed</span>
-                                <span className="font-medium text-gray-800">0</span>
+                                <span className="font-medium text-gray-800">-</span>
                             </div>
                         </div>
                     </div>
