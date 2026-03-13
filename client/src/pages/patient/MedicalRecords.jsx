@@ -400,27 +400,84 @@ function MedicalRecords() {
                                     <p className="text-gray-600 font-medium">Analyzing report with AI...</p>
                                     <p className="text-sm text-gray-400 mt-2">This may take a few moments</p>
                                 </div>
-                            ) : aiResult ? (
-                                <div className="space-y-6">
+                            ) : aiResult ? (() => {
+                                // Normalize: handle both structured object and raw text string
+                                let data;
+                                if (typeof aiResult === 'string') {
+                                    // Parse raw text into sections
+                                    const extract = (text, header, nextHeaders) => {
+                                        const pattern = new RegExp(
+                                            `${header}[^:\\n]*:\\s*([\\s\\S]*?)(?=${nextHeaders.map(h => h + '[^:\\n]*:').join('|')}|$)`, 'i'
+                                        );
+                                        const m = text.match(pattern);
+                                        return m ? m[1].trim() : '';
+                                    };
+                                    const toList = (txt) => txt ? txt.split(/\n/).map(l => l.replace(/^[-*•\d.]+\s*/, '').trim()).filter(Boolean) : [];
+                                    const raw = aiResult;
+                                    data = {
+                                        summary: extract(raw, 'Summary', ['Key Findings', 'Possible Conditions', 'Suggested Next Steps', 'Disclaimer']),
+                                        keyFindings: toList(extract(raw, 'Key Findings', ['Possible Conditions', 'Suggested Next Steps', 'Disclaimer'])),
+                                        possibleConditions: toList(extract(raw, 'Possible Conditions', ['Suggested Next Steps', 'Disclaimer'])),
+                                        suggestedNextSteps: toList(extract(raw, 'Suggested Next Steps', ['Disclaimer'])),
+                                        disclaimer: extract(raw, 'Disclaimer', []),
+                                    };
+                                    // Fallback: if parsing found nothing, show raw text
+                                    if (!data.summary && data.keyFindings.length === 0) {
+                                        data = { rawText: aiResult };
+                                    }
+                                } else {
+                                    data = {
+                                        summary: aiResult.aiSummary || '',
+                                        keyFindings: aiResult.keyFindings || [],
+                                        possibleConditions: aiResult.possibleConditions || [],
+                                        suggestedNextSteps: aiResult.suggestedNextSteps || [],
+                                    };
+                                }
+
+                                // Raw text fallback
+                                if (data.rawText) {
+                                    return (
+                                        <div className="space-y-5">
+                                            <div className="whitespace-pre-wrap text-sm text-gray-700 bg-gray-50 p-5 rounded-xl border border-gray-200 leading-relaxed">
+                                                {data.rawText}
+                                            </div>
+                                            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+                                                <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                                                <p className="text-xs text-amber-700 leading-relaxed">
+                                                    This AI analysis is for informational purposes only and does not constitute medical advice, diagnosis, or treatment. Always consult a qualified healthcare provider.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
+                                return (
+                                <div className="space-y-5">
                                     {/* Summary */}
-                                    {aiResult.aiSummary && (
-                                    <div>
-                                        <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-2">Summary</h4>
-                                        <p className="text-gray-600 bg-gray-50 p-4 rounded-lg border border-gray-100 whitespace-pre-wrap">
-                                            {aiResult.aiSummary}
+                                    {data.summary && (
+                                    <div className="bg-linear-to-r from-purple-50 to-indigo-50 p-5 rounded-xl border border-purple-100">
+                                        <h4 className="flex items-center gap-2 text-sm font-bold text-purple-800 uppercase tracking-wider mb-3">
+                                            <div className="w-2 h-2 rounded-full bg-purple-500" />
+                                            Summary
+                                        </h4>
+                                        <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                                            {data.summary}
                                         </p>
                                     </div>
                                     )}
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {/* Key Findings */}
-                                        {aiResult.keyFindings?.length > 0 && (
-                                        <div>
-                                            <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-2">Key Findings</h4>
-                                            <ul className="space-y-2">
-                                                {aiResult.keyFindings.map((finding, idx) => (
-                                                    <li key={idx} className="flex items-start gap-2 text-sm text-gray-600">
-                                                        <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0" />
+                                        {data.keyFindings?.length > 0 && (
+                                        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                            <h4 className="flex items-center gap-2 text-sm font-bold text-gray-700 uppercase tracking-wider mb-3">
+                                                <div className="w-2 h-2 rounded-full bg-purple-500" />
+                                                Key Findings
+                                            </h4>
+                                            <ul className="space-y-2.5">
+                                                {data.keyFindings.map((finding, idx) => (
+                                                    <li key={idx} className="flex items-start gap-2.5 text-sm text-gray-600 leading-relaxed">
+                                                        <span className="text-purple-500 mt-0.5 shrink-0">•</span>
                                                         {finding}
                                                     </li>
                                                 ))}
@@ -429,13 +486,16 @@ function MedicalRecords() {
                                         )}
 
                                         {/* Possible Conditions */}
-                                        {aiResult.possibleConditions?.length > 0 && (
-                                        <div>
-                                            <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-2">Possible Conditions</h4>
-                                            <ul className="space-y-2">
-                                                {aiResult.possibleConditions.map((condition, idx) => (
-                                                    <li key={idx} className="flex items-start gap-2 text-sm text-gray-600">
-                                                        <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 shrink-0" />
+                                        {data.possibleConditions?.length > 0 && (
+                                        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                            <h4 className="flex items-center gap-2 text-sm font-bold text-gray-700 uppercase tracking-wider mb-3">
+                                                <div className="w-2 h-2 rounded-full bg-orange-500" />
+                                                Possible Conditions
+                                            </h4>
+                                            <ul className="space-y-2.5">
+                                                {data.possibleConditions.map((condition, idx) => (
+                                                    <li key={idx} className="flex items-start gap-2.5 text-sm text-gray-600 leading-relaxed">
+                                                        <span className="text-orange-500 mt-0.5 shrink-0">•</span>
                                                         {condition}
                                                     </li>
                                                 ))}
@@ -445,34 +505,36 @@ function MedicalRecords() {
                                     </div>
 
                                     {/* Suggested Next Steps */}
-                                    {aiResult.suggestedNextSteps?.length > 0 && (
-                                    <div>
-                                        <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-2">Suggested Next Steps</h4>
-                                        <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-100">
-                                            <ul className="space-y-2">
-                                                {aiResult.suggestedNextSteps.map((step, idx) => (
-                                                    <li key={idx} className="flex items-start gap-2 text-sm text-blue-800">
-                                                        <CheckCircle className="w-4 h-4 mt-0.5 text-blue-500 shrink-0" />
-                                                        {step}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
+                                    {data.suggestedNextSteps?.length > 0 && (
+                                    <div className="bg-blue-50/70 p-5 rounded-xl border border-blue-200">
+                                        <h4 className="flex items-center gap-2 text-sm font-bold text-blue-800 uppercase tracking-wider mb-3">
+                                            <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                            Suggested Next Steps
+                                        </h4>
+                                        <ul className="space-y-2.5">
+                                            {data.suggestedNextSteps.map((step, idx) => (
+                                                <li key={idx} className="flex items-start gap-2.5 text-sm text-blue-800 leading-relaxed">
+                                                    <CheckCircle className="w-4 h-4 mt-0.5 text-blue-500 shrink-0" />
+                                                    {step}
+                                                </li>
+                                            ))}
+                                        </ul>
                                     </div>
                                     )}
 
                                     {/* Medical Disclaimer */}
-                                    <div className="mt-8 p-4 bg-orange-50 border border-orange-100 rounded-lg flex items-start gap-3">
-                                        <AlertCircle className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
-                                        <div className="text-sm text-orange-800">
-                                            <p className="font-semibold mb-1">Medical Disclaimer</p>
-                                            <p className="opacity-90">
-                                                This AI analysis is provided for informational purposes only and does not constitute medical advice, diagnosis, or treatment. Always consult with a qualified healthcare provider regarding any medical conditions or treatment plans.
+                                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+                                        <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="text-xs font-semibold text-amber-800 mb-1">Medical Disclaimer</p>
+                                            <p className="text-xs text-amber-700 leading-relaxed">
+                                                {data.disclaimer || 'This AI analysis is provided for informational purposes only and does not constitute medical advice, diagnosis, or treatment. Always consult with a qualified healthcare provider regarding any medical conditions or treatment plans.'}
                                             </p>
                                         </div>
                                     </div>
                                 </div>
-                            ) : null}
+                                );
+                            })() : null}
                         </div>
                     </div>
                 </div>
