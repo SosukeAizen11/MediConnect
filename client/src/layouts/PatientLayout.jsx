@@ -5,7 +5,6 @@ import {
     Building2,
     CalendarCheck,
     FileText,
-    Brain,
     Bell,
     Ticket,
     UserCircle,
@@ -33,7 +32,6 @@ function PatientLayout() {
         { path: '/patient/appointments', label: 'Appointments', icon: CalendarCheck },
         { path: '/patient/token', label: 'My Token', icon: Ticket },
         { path: '/patient/records', label: 'Medical Records', icon: FileText },
-        { path: '/patient/ai-insights', label: 'AI Health Insights', icon: Brain },
         { path: '/patient/notifications', label: 'Notifications', icon: Bell },
         { path: '/patient/profile', label: 'Profile', icon: UserCircle },
     ];

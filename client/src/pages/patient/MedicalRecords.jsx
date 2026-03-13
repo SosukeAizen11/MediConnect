@@ -11,9 +11,11 @@ import {
     CheckCircle,
     AlertCircle,
     X,
+    Brain,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { uploadReport, getMyReports, deleteReport } from '../../api/report.api';
+import apiClient from '../../api/apiClient';
 
 function MedicalRecords() {
     const navigate = useNavigate();
@@ -24,6 +26,12 @@ function MedicalRecords() {
     const [uploading, setUploading] = useState(false);
     const [deletingId, setDeletingId] = useState(null);
     const [toast, setToast] = useState(null);
+
+    // AI Analysis State
+    const [selectedReportId, setSelectedReportId] = useState(null);
+    const [showAiModal, setShowAiModal] = useState(false);
+    const [aiResult, setAiResult] = useState(null);
+    const [loadingAI, setLoadingAI] = useState(false);
 
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
 
@@ -125,6 +133,28 @@ function MedicalRecords() {
             });
         } finally {
             setDeletingId(null);
+        }
+    };
+
+    const handleAnalyze = async (reportId) => {
+        setSelectedReportId(reportId);
+        setShowAiModal(true);
+        setLoadingAI(true);
+        setAiResult(null);
+
+        try {
+            const response = await apiClient.post(
+                `/ai-insights/analyze-report/${reportId}`
+            );
+            setAiResult(response.data.aiResult);
+        } catch (error) {
+            setToast({
+                type: 'error',
+                message: error.response?.data?.message || 'Failed to analyze report',
+            });
+            setShowAiModal(false);
+        } finally {
+            setLoadingAI(false);
         }
     };
 
@@ -300,13 +330,20 @@ function MedicalRecords() {
                                         <span>Uploaded: {formatDate(report.uploadedAt)}</span>
                                     </div>
 
-                                    <div className="flex gap-2">
+                                    <div className="flex gap-2 flex-wrap sm:flex-nowrap">
                                         <button
                                             onClick={() => navigate(`/report-viewer?url=${encodeURIComponent(report.fileUrl)}`)}
                                             className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-blue-600 border border-blue-200 bg-white rounded-lg hover:bg-blue-50 transition-colors"
                                         >
                                             <Eye className="w-3.5 h-3.5" />
                                             View
+                                        </button>
+                                        <button
+                                            onClick={() => handleAnalyze(report._id)}
+                                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-purple-600 border border-purple-200 bg-white rounded-lg hover:bg-purple-50 transition-colors"
+                                        >
+                                            <Brain className="w-3.5 h-3.5" />
+                                            Analyze with AI
                                         </button>
                                         <button
                                             onClick={() => handleDelete(report._id)}
@@ -327,6 +364,119 @@ function MedicalRecords() {
                     </div>
                 )}
             </div>
+
+            {/* AI Analysis Modal */}
+            {showAiModal && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gray-50/50">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-purple-100 rounded-lg text-purple-600">
+                                    <Brain className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-gray-800">AI Health Insights</h3>
+                                    <p className="text-sm text-gray-500">Automated analysis of your medical report</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setShowAiModal(false);
+                                    setAiResult(null);
+                                    setSelectedReportId(null);
+                                }}
+                                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 overflow-y-auto flex-1">
+                            {loadingAI ? (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <Loader2 className="w-10 h-10 text-purple-600 animate-spin mb-4" />
+                                    <p className="text-gray-600 font-medium">Analyzing report with AI...</p>
+                                    <p className="text-sm text-gray-400 mt-2">This may take a few moments</p>
+                                </div>
+                            ) : aiResult ? (
+                                <div className="space-y-6">
+                                    {/* Summary */}
+                                    {aiResult.aiSummary && (
+                                    <div>
+                                        <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-2">Summary</h4>
+                                        <p className="text-gray-600 bg-gray-50 p-4 rounded-lg border border-gray-100 whitespace-pre-wrap">
+                                            {aiResult.aiSummary}
+                                        </p>
+                                    </div>
+                                    )}
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {/* Key Findings */}
+                                        {aiResult.keyFindings?.length > 0 && (
+                                        <div>
+                                            <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-2">Key Findings</h4>
+                                            <ul className="space-y-2">
+                                                {aiResult.keyFindings.map((finding, idx) => (
+                                                    <li key={idx} className="flex items-start gap-2 text-sm text-gray-600">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0" />
+                                                        {finding}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                        )}
+
+                                        {/* Possible Conditions */}
+                                        {aiResult.possibleConditions?.length > 0 && (
+                                        <div>
+                                            <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-2">Possible Conditions</h4>
+                                            <ul className="space-y-2">
+                                                {aiResult.possibleConditions.map((condition, idx) => (
+                                                    <li key={idx} className="flex items-start gap-2 text-sm text-gray-600">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 shrink-0" />
+                                                        {condition}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                        )}
+                                    </div>
+
+                                    {/* Suggested Next Steps */}
+                                    {aiResult.suggestedNextSteps?.length > 0 && (
+                                    <div>
+                                        <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-2">Suggested Next Steps</h4>
+                                        <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-100">
+                                            <ul className="space-y-2">
+                                                {aiResult.suggestedNextSteps.map((step, idx) => (
+                                                    <li key={idx} className="flex items-start gap-2 text-sm text-blue-800">
+                                                        <CheckCircle className="w-4 h-4 mt-0.5 text-blue-500 shrink-0" />
+                                                        {step}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    )}
+
+                                    {/* Medical Disclaimer */}
+                                    <div className="mt-8 p-4 bg-orange-50 border border-orange-100 rounded-lg flex items-start gap-3">
+                                        <AlertCircle className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
+                                        <div className="text-sm text-orange-800">
+                                            <p className="font-semibold mb-1">Medical Disclaimer</p>
+                                            <p className="opacity-90">
+                                                This AI analysis is provided for informational purposes only and does not constitute medical advice, diagnosis, or treatment. Always consult with a qualified healthcare provider regarding any medical conditions or treatment plans.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : null}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
