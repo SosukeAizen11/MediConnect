@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getDoctorsByClinic } from '../../api/doctor.api';
 import { getClinicById } from '../../api/clinic.api';
 import { ArrowLeft, User, Stethoscope, Clock, Building2, CalendarPlus, Ticket, Info } from 'lucide-react';
+import AIReceptionistModal from '../../components/AIReceptionistModal';
 
 function ClinicDoctors() {
     const { clinicId } = useParams();
@@ -11,6 +12,8 @@ function ClinicDoctors() {
     const [clinic, setClinic] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [aiOpen, setAiOpen] = useState(false);
+    const [selectedDoctor, setSelectedDoctor] = useState(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -33,6 +36,11 @@ function ClinicDoctors() {
 
     const isTokenClinic = clinic?.clinicType === 'TOKEN';
 
+    const openAIReceptionist = (doctor) => {
+        setSelectedDoctor(doctor);
+        setAiOpen(true);
+    };
+
     const SkeletonCard = () => (
         <div className="bg-white rounded-xl p-5 border border-gray-200 animate-pulse">
             <div className="flex items-center gap-4 mb-4">
@@ -48,6 +56,7 @@ function ClinicDoctors() {
     );
 
     return (
+        <>
         <div className="space-y-6">
             {/* Page Header */}
             <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
@@ -71,7 +80,7 @@ function ClinicDoctors() {
             {/* Token Clinic Notice */}
             {!loading && isTokenClinic && (
                 <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 flex items-start gap-3">
-                    <Info className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                    <Info className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
                     <div>
                         <p className="text-sm font-medium text-orange-800">Token-Based Walk-in Clinic</p>
                         <p className="text-sm text-orange-700 mt-1">
@@ -191,13 +200,22 @@ function ClinicDoctors() {
                                         Join Token Queue
                                     </button>
                                 ) : (
-                                    <button
-                                        onClick={() => navigate(`/patient/book/${clinicId}/${doctor._id}`)}
-                                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-                                    >
-                                        <CalendarPlus className="w-4 h-4" />
-                                        Book Appointment
-                                    </button>
+                                    <div className="flex flex-col">
+                                        <button
+                                            onClick={() => navigate(`/patient/book/${clinicId}/${doctor._id}`)}
+                                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                                        >
+                                            <CalendarPlus className="w-4 h-4" />
+                                            Book Appointment
+                                        </button>
+                                        <button
+                                            onClick={() => openAIReceptionist(doctor)}
+                                            variant="outline"
+                                            className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                                        >
+                                            🎤 Talk to AI Receptionist
+                                        </button>
+                                    </div>
                                 )}
                             </div>
                         ))}
@@ -205,6 +223,13 @@ function ClinicDoctors() {
                 </>
             )}
         </div>
+
+            <AIReceptionistModal
+                isOpen={aiOpen}
+                doctor={selectedDoctor}
+                onClose={() => setAiOpen(false)}
+            />
+        </>
     );
 }
 

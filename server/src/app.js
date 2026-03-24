@@ -14,6 +14,7 @@ import slotRoutes from "./routes/slot.routes.js";
 import leaveRoutes from "./routes/leave.routes.js";
 import reportRoutes from "./routes/report.routes.js";
 import aiInsightsRoutes from "./routes/aiInsights.routes.js";
+import aiReceptionistRoutes from "./routes/aiReceptionist.routes.js";
 import notFound from './middleware/notFound.js';
 import errorHandler from './middleware/errorHandler.js';
 
@@ -38,6 +39,7 @@ app.use("/api/v1/slots", slotRoutes);
 app.use("/api/v1/leaves", leaveRoutes);
 app.use("/api/v1/reports", reportRoutes);
 app.use("/api/v1/ai-insights", aiInsightsRoutes);
+app.use("/api/v1/ai-receptionist", aiReceptionistRoutes);
 
 // Middleware
 app.use(notFound);
