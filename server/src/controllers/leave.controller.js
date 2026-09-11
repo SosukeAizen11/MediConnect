@@ -1,10 +1,19 @@
 import DoctorLeave from '../models/doctorLeave.model.js';
+import Doctor from '../models/doctor.model.js';
 
 // GET /api/v1/leaves — all leaves for logged-in doctor
 export const getMyLeaves = async (req, res) => {
     try {
+        const doctorProfile = await Doctor.findOne({ user: req.user._id || req.user.id });
+        if (!doctorProfile) {
+            return res.status(404).json({
+                success: false,
+                message: 'Doctor profile not found',
+            });
+        }
+
         const leaves = await DoctorLeave.find({
-            doctor: req.user.id,
+            doctor: doctorProfile._id,
         }).sort({ date: 1 });
 
         res.status(200).json({
@@ -32,9 +41,17 @@ export const createLeave = async (req, res) => {
             });
         }
 
+        const doctorProfile = await Doctor.findOne({ user: req.user._id || req.user.id });
+        if (!doctorProfile) {
+            return res.status(404).json({
+                success: false,
+                message: 'Doctor profile not found',
+            });
+        }
+
         // Check for duplicate
         const existing = await DoctorLeave.findOne({
-            doctor: req.user.id,
+            doctor: doctorProfile._id,
             date,
         });
 
@@ -46,7 +63,7 @@ export const createLeave = async (req, res) => {
         }
 
         const leave = await DoctorLeave.create({
-            doctor: req.user.id,
+            doctor: doctorProfile._id,
             date,
             reason: reason || '',
         });
@@ -69,9 +86,17 @@ export const deleteLeave = async (req, res) => {
     try {
         const { id } = req.params;
 
+        const doctorProfile = await Doctor.findOne({ user: req.user._id || req.user.id });
+        if (!doctorProfile) {
+            return res.status(404).json({
+                success: false,
+                message: 'Doctor profile not found',
+            });
+        }
+
         const leave = await DoctorLeave.findOne({
             _id: id,
-            doctor: req.user.id,
+            doctor: doctorProfile._id,
         });
 
         if (!leave) {

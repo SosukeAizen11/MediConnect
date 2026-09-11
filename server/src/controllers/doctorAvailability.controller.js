@@ -1,4 +1,5 @@
 import DoctorAvailability from "../models/doctorAvailability.model.js";
+import Doctor from "../models/doctor.model.js";
 
 // Create availability
 // Only for logged-in doctor
@@ -14,9 +15,17 @@ export const createAvailability = async (req, res) => {
             });
         }
 
+        const doctorProfile = await Doctor.findOne({ user: req.user._id || req.user.id });
+        if (!doctorProfile) {
+            return res.status(404).json({
+                success: false,
+                message: "Doctor profile not found",
+            });
+        }
+
         // Prevent duplicate dayOfWeek for same doctor
         const existingAvailability = await DoctorAvailability.findOne({
-            doctor: req.user.id,
+            doctor: doctorProfile._id,
             dayOfWeek,
             isActive: true,
         });
@@ -30,7 +39,7 @@ export const createAvailability = async (req, res) => {
 
         // Save availability
         const availability = await DoctorAvailability.create({
-            doctor: req.user.id,
+            doctor: doctorProfile._id,
             dayOfWeek,
             startTime,
             endTime,
@@ -53,9 +62,17 @@ export const createAvailability = async (req, res) => {
 // Get all availability entries for logged-in doctor
 export const getMyAvailability = async (req, res) => {
     try {
+        const doctorProfile = await Doctor.findOne({ user: req.user._id || req.user.id });
+        if (!doctorProfile) {
+            return res.status(404).json({
+                success: false,
+                message: "Doctor profile not found",
+            });
+        }
+
         // Return all active availability entries for logged-in doctor
         const availabilities = await DoctorAvailability.find({
-            doctor: req.user.id,
+            doctor: doctorProfile._id,
             isActive: true,
         }).sort({ dayOfWeek: 1 });
 
@@ -78,9 +95,17 @@ export const updateAvailability = async (req, res) => {
         const { startTime, endTime, slotDuration } = req.body;
         const { id } = req.params;
 
+        const doctorProfile = await Doctor.findOne({ user: req.user._id || req.user.id });
+        if (!doctorProfile) {
+            return res.status(404).json({
+                success: false,
+                message: "Doctor profile not found",
+            });
+        }
+
         const availability = await DoctorAvailability.findOne({
             _id: id,
-            doctor: req.user.id,
+            doctor: doctorProfile._id,
             isActive: true,
         });
 
@@ -140,9 +165,17 @@ export const deleteAvailability = async (req, res) => {
     try {
         const { id } = req.params;
 
+        const doctorProfile = await Doctor.findOne({ user: req.user._id || req.user.id });
+        if (!doctorProfile) {
+            return res.status(404).json({
+                success: false,
+                message: "Doctor profile not found",
+            });
+        }
+
         const availability = await DoctorAvailability.findOne({
             _id: id,
-            doctor: req.user.id,
+            doctor: doctorProfile._id,
             isActive: true,
         });
 

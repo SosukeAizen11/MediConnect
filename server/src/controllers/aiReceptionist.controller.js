@@ -1,7 +1,7 @@
 import { analyzeReceptionistIntent } from "../utils/groqClient.js";
 import { generateVoice } from "../utils/elevenlabsClient.js";
 import Doctor from "../models/doctor.model.js";
-import Appointment from "../models/appointment.model.js";
+import { bookAppointment } from "../modules/scheduling/index.js";
 
 // Helper: attach TTS audio to any response
 const sendWithVoice = async (res, data) => {
@@ -16,6 +16,23 @@ const sendWithVoice = async (res, data) => {
     return res.json(data);
 };
 
+
+// Helper: normalize time input (e.g. "3 PM", "3:00 PM") to 24-hour "HH:MM" for scheduling
+const normalizeTimeTo24Hour = (t) => {
+    if (!t) return t;
+    if (/^\d{2}:\d{2}$/.test(t.trim())) return t.trim();
+    const timeLower = t.toLowerCase().replace(/\s/g, '');
+    const ampmMatch = timeLower.match(/am|pm/);
+    const numMatch = timeLower.match(/\d+/g);
+    if (!numMatch) return t;
+    let h = parseInt(numMatch[0]);
+    let m = numMatch[1] ? parseInt(numMatch[1]) : 0;
+    if (ampmMatch) {
+        if (ampmMatch[0] === 'pm' && h < 12) h += 12;
+        if (ampmMatch[0] === 'am' && h === 12) h = 0;
+    }
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+};
 
 const sessionStore = new Map();
 
@@ -65,26 +82,20 @@ export const chatWithReceptionist = async (req, res) => {
                 }
 
                 try {
-                    console.log("📋 Booking data (confirm):", {
-                        patient: req.user.id,
-                        doctor: doctorId,
-                        clinic: doctor.clinic,
+                    const bookingTime = normalizeTimeTo24Hour(selectedTime);
+                    console.log("📋 Booking via Scheduling Facade:", {
+                        patientId: req.user.id,
+                        doctorId,
                         date: parsedDate,
-                        time: selectedTime
+                        time: bookingTime
                     });
 
-                    const appointment = await Appointment.create({
-                        patient: req.user.id,
-                        doctor: doctorId,
-                        clinic: doctor.clinic,
+                    const appointment = await bookAppointment({
+                        patientId: req.user.id,
+                        doctorId,
                         date: parsedDate,
-                        time: selectedTime,
-                        status: "BOOKED",
+                        time: bookingTime,
                     });
-
-                    if (!appointment) {
-                        throw new Error("Appointment not created");
-                    }
 
                     console.log("✅ Saved appointment (confirm):", appointment);
                     sessionStore.delete(userId);
@@ -101,7 +112,7 @@ export const chatWithReceptionist = async (req, res) => {
                     return sendWithVoice(res, {
                         success: false,
                         type: "BOOKING_FAILED",
-                        message: "Unable to book appointment"
+                        message: err.message || "Unable to book appointment"
                     });
                 }
             }

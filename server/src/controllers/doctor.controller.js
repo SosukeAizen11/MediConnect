@@ -1,8 +1,11 @@
 import Doctor from '../models/doctor.model.js';
 import Clinic from '../models/clinic.model.js';
-import Appointment from '../models/appointment.model.js';
 import Token from '../models/token.model.js';
 import DoctorPost from '../models/post.model.js';
+import {
+    getDoctorAppointmentStats,
+    getCompletedAppointmentsByDoctor,
+} from '../modules/scheduling/index.js';
 
 export const createDoctorProfile = async (req, res, next) => {
     try {
@@ -138,13 +141,8 @@ export const getMyPatients = async (req, res, next) => {
             doctorDoc = await Doctor.create({ user: req.user._id });
         }
 
-        // Patients from completed appointments
-        const completedAppointments = await Appointment.find({
-            doctor: doctorDoc._id,
-            status: 'COMPLETED',
-        })
-            .populate('patient', 'name phone')
-            .sort({ date: -1, time: -1 });
+        // Patients from completed appointments — via Scheduling facade
+        const completedAppointments = await getCompletedAppointmentsByDoctor(doctorDoc._id);
 
         // Patients from completed tokens (via doctor's clinic)
         let completedTokens = [];
@@ -219,21 +217,12 @@ export const getDashboardStats = async (req, res, next) => {
         // 1. Total Posts
         const totalPosts = await DoctorPost.countDocuments({ author: req.user._id });
 
-        // 2. Today's Appointments
-        // Date in Appointment model is stored as a string "YYYY-MM-DD"
+        // 2 & 3. Today's and Pending Appointments — via Scheduling facade
         const today = new Date();
         const dateString = today.toISOString().split('T')[0];
 
-        const todayAppointments = await Appointment.countDocuments({
-            doctor: doctorId,
-            date: dateString
-        });
-
-        // 3. Pending Appointments
-        const pendingAppointments = await Appointment.countDocuments({
-            doctor: doctorId,
-            status: { $in: ['BOOKED', 'CONFIRMED'] }
-        });
+        const { todayCount: todayAppointments, pendingCount: pendingAppointments } =
+            await getDoctorAppointmentStats(doctorId, dateString);
 
         // 4. Active Tokens
         let activeTokens = 0;

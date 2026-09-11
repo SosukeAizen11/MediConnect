@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const doctorLeaveSchema = new mongoose.Schema({
     doctor: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+        ref: 'Doctor',
         required: true,
     },
     date: {
