@@ -125,3 +125,54 @@ export const findById = async (id) => {
 export const save = async (appointment) => {
     return appointment.save();
 };
+
+
+/**
+ * Returns an appointment populated with patient (name, email, phone) and clinic (name, address)
+ * matching the consultation completion response shape.
+ *
+ * @param {string} appointmentId
+ * @returns {Promise<object|null>}
+ */
+export const findPopulatedConsultationById = async (appointmentId) => {
+    return Appointment.findById(appointmentId)
+        .populate('patient', 'name email phone')
+        .populate('clinic', 'name address');
+};
+
+/**
+ * Returns an appointment populated with patient full profile, clinic, and doctor details.
+ *
+ * @param {string} appointmentId
+ * @returns {Promise<object|null>}
+ */
+export const findDetailsById = async (appointmentId) => {
+    return Appointment.findById(appointmentId)
+        .populate('patient', 'name email phone gender dateOfBirth address emergencyContact')
+        .populate('clinic', 'name address')
+        .populate({
+            path: 'doctor',
+            populate: { path: 'user', select: 'name email' },
+        });
+};
+
+/**
+ * Returns total count of all appointments across the system.
+ *
+ * @returns {Promise<number>}
+ */
+export const countAll = async () => {
+    return Appointment.countDocuments();
+};
+
+/**
+ * Returns count of appointments matching any of the given status values.
+ *
+ * @param {Array<string>} statuses
+ * @returns {Promise<number>}
+ */
+export const countByStatuses = async (statuses) => {
+    return Appointment.countDocuments({
+        status: { $in: statuses },
+    });
+};

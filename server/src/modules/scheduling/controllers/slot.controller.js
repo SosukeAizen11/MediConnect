@@ -1,4 +1,4 @@
-import { getAvailableSlots as fetchAvailableSlots } from '../modules/scheduling/index.js';
+import { getAvailableSlots as fetchAvailableSlots } from '../services/appointment.service.js';
 
 export const getAvailableSlots = async (req, res, next) => {
     try {

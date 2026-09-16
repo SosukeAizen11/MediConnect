@@ -29,25 +29,6 @@ const appointmentSchema = new mongoose.Schema({
         enum: ['BOOKED', 'CONFIRMED', 'CANCELLED', 'COMPLETED'],
         default: 'BOOKED',
     },
-    diagnosis: {
-        type: String,
-        trim: true,
-        default: '',
-    },
-    prescription: {
-        type: String,
-        trim: true,
-        default: '',
-    },
-    consultationNotes: {
-        type: String,
-        trim: true,
-        default: '',
-    },
-    prescriptionUrl: {
-        type: String,
-        default: '',
-    },
     createdAt: {
         type: Date,
         default: Date.now,

@@ -1,5 +1,5 @@
-import DoctorAvailability from "../models/doctorAvailability.model.js";
-import Doctor from "../models/doctor.model.js";
+import * as doctorRepository from '../../../repositories/doctor.repository.js';
+import * as doctorAvailabilityService from '../services/doctorAvailability.service.js';
 
 // Create availability
 // Only for logged-in doctor
@@ -7,39 +7,16 @@ export const createAvailability = async (req, res) => {
     try {
         const { dayOfWeek, startTime, endTime, slotDuration } = req.body;
 
-        // Ensure endTime > startTime
-        if (startTime >= endTime) {
-            return res.status(400).json({
-                success: false,
-                message: "End time must be after start time",
-            });
-        }
-
-        const doctorProfile = await Doctor.findOne({ user: req.user._id || req.user.id });
+        const doctorProfile = await doctorRepository.findByUserId(req.user._id || req.user.id);
         if (!doctorProfile) {
             return res.status(404).json({
                 success: false,
-                message: "Doctor profile not found",
+                message: 'Doctor profile not found',
             });
         }
 
-        // Prevent duplicate dayOfWeek for same doctor
-        const existingAvailability = await DoctorAvailability.findOne({
-            doctor: doctorProfile._id,
-            dayOfWeek,
-            isActive: true,
-        });
-
-        if (existingAvailability) {
-            return res.status(400).json({
-                success: false,
-                message: "Availability for this day already exists",
-            });
-        }
-
-        // Save availability
-        const availability = await DoctorAvailability.create({
-            doctor: doctorProfile._id,
+        const availability = await doctorAvailabilityService.createAvailability({
+            doctorProfileId: doctorProfile._id,
             dayOfWeek,
             startTime,
             endTime,
@@ -51,9 +28,15 @@ export const createAvailability = async (req, res) => {
             data: availability,
         });
     } catch (error) {
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({
+                success: false,
+                message: error.message,
+            });
+        }
         res.status(500).json({
             success: false,
-            message: "Failed to create availability",
+            message: 'Failed to create availability',
             error: error.message,
         });
     }
@@ -62,28 +45,30 @@ export const createAvailability = async (req, res) => {
 // Get all availability entries for logged-in doctor
 export const getMyAvailability = async (req, res) => {
     try {
-        const doctorProfile = await Doctor.findOne({ user: req.user._id || req.user.id });
+        const doctorProfile = await doctorRepository.findByUserId(req.user._id || req.user.id);
         if (!doctorProfile) {
             return res.status(404).json({
                 success: false,
-                message: "Doctor profile not found",
+                message: 'Doctor profile not found',
             });
         }
 
-        // Return all active availability entries for logged-in doctor
-        const availabilities = await DoctorAvailability.find({
-            doctor: doctorProfile._id,
-            isActive: true,
-        }).sort({ dayOfWeek: 1 });
+        const availabilities = await doctorAvailabilityService.getMyAvailability(doctorProfile._id);
 
         res.status(200).json({
             success: true,
             data: availabilities,
         });
     } catch (error) {
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({
+                success: false,
+                message: error.message,
+            });
+        }
         res.status(500).json({
             success: false,
-            message: "Failed to fetch availability",
+            message: 'Failed to fetch availability',
             error: error.message,
         });
     }
@@ -95,66 +80,36 @@ export const updateAvailability = async (req, res) => {
         const { startTime, endTime, slotDuration } = req.body;
         const { id } = req.params;
 
-        const doctorProfile = await Doctor.findOne({ user: req.user._id || req.user.id });
+        const doctorProfile = await doctorRepository.findByUserId(req.user._id || req.user.id);
         if (!doctorProfile) {
             return res.status(404).json({
                 success: false,
-                message: "Doctor profile not found",
+                message: 'Doctor profile not found',
             });
         }
 
-        const availability = await DoctorAvailability.findOne({
-            _id: id,
-            doctor: doctorProfile._id,
-            isActive: true,
+        const availability = await doctorAvailabilityService.updateAvailability({
+            availabilityId: id,
+            doctorProfileId: doctorProfile._id,
+            startTime,
+            endTime,
+            slotDuration,
         });
-
-        if (!availability) {
-            return res.status(404).json({
-                success: false,
-                message: "Availability not found",
-            });
-        }
-
-        // Ensure endTime > startTime
-        if (startTime && endTime) {
-            if (startTime >= endTime) {
-                return res.status(400).json({
-                    success: false,
-                    message: "End time must be after start time",
-                });
-            }
-        } else if (startTime) {
-            if (startTime >= availability.endTime) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Start time must be before end time",
-                });
-            }
-        } else if (endTime) {
-            if (availability.startTime >= endTime) {
-                return res.status(400).json({
-                    success: false,
-                    message: "End time must be after start time",
-                });
-            }
-        }
-
-        // Update fields
-        availability.startTime = startTime || availability.startTime;
-        availability.endTime = endTime || availability.endTime;
-        availability.slotDuration = slotDuration || availability.slotDuration;
-
-        await availability.save();
 
         res.status(200).json({
             success: true,
             data: availability,
         });
     } catch (error) {
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({
+                success: false,
+                message: error.message,
+            });
+        }
         res.status(500).json({
             success: false,
-            message: "Failed to update availability",
+            message: 'Failed to update availability',
             error: error.message,
         });
     }
@@ -165,40 +120,34 @@ export const deleteAvailability = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const doctorProfile = await Doctor.findOne({ user: req.user._id || req.user.id });
+        const doctorProfile = await doctorRepository.findByUserId(req.user._id || req.user.id);
         if (!doctorProfile) {
             return res.status(404).json({
                 success: false,
-                message: "Doctor profile not found",
+                message: 'Doctor profile not found',
             });
         }
 
-        const availability = await DoctorAvailability.findOne({
-            _id: id,
-            doctor: doctorProfile._id,
-            isActive: true,
+        await doctorAvailabilityService.deleteAvailability({
+            availabilityId: id,
+            doctorProfileId: doctorProfile._id,
         });
-
-        if (!availability) {
-            return res.status(404).json({
-                success: false,
-                message: "Availability not found",
-            });
-        }
-
-        // Soft delete by setting isActive false
-        availability.isActive = false;
-        await availability.save();
 
         res.status(200).json({
             success: true,
             data: {},
-            message: "Availability deleted successfully",
+            message: 'Availability deleted successfully',
         });
     } catch (error) {
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({
+                success: false,
+                message: error.message,
+            });
+        }
         res.status(500).json({
             success: false,
-            message: "Failed to delete availability",
+            message: 'Failed to delete availability',
             error: error.message,
         });
     }

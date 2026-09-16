@@ -4,17 +4,18 @@ import healthRoutes from './routes/health.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import clinicRoutes from './routes/clinic.routes.js';
 import doctorRoutes from './routes/doctor.routes.js';
-import appointmentRoutes from './routes/appointment.routes.js';
+import appointmentRoutes from './modules/scheduling/routes/appointment.routes.js';
 import tokenRoutes from './routes/token.routes.js';
 import patientRoutes from './routes/patient.routes.js';
 import postRoutes from './routes/post.routes.js';
 import adminRoutes from './routes/admin.routes.js';
-import doctorAvailabilityRoutes from "./routes/doctorAvailability.routes.js";
-import slotRoutes from "./routes/slot.routes.js";
-import leaveRoutes from "./routes/leave.routes.js";
+import doctorAvailabilityRoutes from "./modules/scheduling/routes/doctorAvailability.routes.js";
+import slotRoutes from "./modules/scheduling/routes/slot.routes.js";
+import leaveRoutes from "./modules/scheduling/routes/leave.routes.js";
 import reportRoutes from "./routes/report.routes.js";
 import aiInsightsRoutes from "./routes/aiInsights.routes.js";
 import aiReceptionistRoutes from "./routes/aiReceptionist.routes.js";
+import consultationRoutes from "./modules/clinical/routes/consultation.routes.js";
 import notFound from './middleware/notFound.js';
 import errorHandler from './middleware/errorHandler.js';
 
@@ -40,6 +41,7 @@ app.use("/api/v1/leaves", leaveRoutes);
 app.use("/api/v1/reports", reportRoutes);
 app.use("/api/v1/ai-insights", aiInsightsRoutes);
 app.use("/api/v1/ai-receptionist", aiReceptionistRoutes);
+app.use("/api/v1/consultations", consultationRoutes);
 
 // Middleware
 app.use(notFound);

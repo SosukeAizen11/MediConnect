@@ -13,9 +13,9 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 import { config } from '../config/env.js';
 import User from '../models/user.model.js';
 import Doctor from '../models/doctor.model.js';
-import DoctorAvailability from '../models/doctorAvailability.model.js';
-import DoctorLeave from '../models/doctorLeave.model.js';
-import Appointment from '../models/appointment.model.js';
+import DoctorAvailability from '../modules/scheduling/models/doctorAvailability.model.js';
+import DoctorLeave from '../modules/scheduling/models/doctorLeave.model.js';
+import Appointment from '../modules/scheduling/models/appointment.model.js';
 
 const mongoUri = process.env.MONGO_URI || config.MONGO_URI || 'mongodb://localhost:27017/mediconnect';
 

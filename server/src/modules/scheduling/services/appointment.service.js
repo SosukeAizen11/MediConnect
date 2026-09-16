@@ -1,8 +1,13 @@
-import * as doctorRepository from '../repositories/doctor.repository.js';
+import * as doctorRepository from '../../../repositories/doctor.repository.js';
 import * as doctorLeaveRepository from '../repositories/doctorLeave.repository.js';
 import * as doctorAvailabilityRepository from '../repositories/doctorAvailability.repository.js';
 import * as appointmentRepository from '../repositories/appointment.repository.js';
-import { generateSlots } from '../utils/slotGenerator.js';
+import { generateSlots } from '../../../utils/slotGenerator.js';
+import {
+    getConsultationByAppointmentId,
+    getPatientConsultationHistory,
+    getPrescriptionUrlsForAppointments,
+} from '../../clinical/index.js';
 
 export const bookAppointment = async ({
     patientId,
@@ -201,13 +206,29 @@ export const getPatientDashboardData = async (patientId, todayString) => {
 };
 
 /**
- * Retrieves all appointments for a given patient with doctor and clinic details.
+ * Retrieves all appointments for a given patient with doctor and clinic details,
+ * decorated with prescription URLs from the Clinical domain.
  *
  * @param {string} patientId - User._id of the patient
  * @returns {Promise<Array>}
  */
 export const getPatientAppointments = async (patientId) => {
-    return appointmentRepository.findByPatientWithDetails(patientId);
+    const appointments = await appointmentRepository.findByPatientWithDetails(patientId);
+    if (!appointments || appointments.length === 0) {
+        return [];
+    }
+
+    const appointmentIds = appointments.map((appt) => appt._id);
+    const prescriptionUrls = await getPrescriptionUrlsForAppointments(appointmentIds);
+
+    return appointments.map((appt) => {
+        const apptObj = appt.toObject ? appt.toObject() : { ...appt };
+        const clinicalUrl = prescriptionUrls[appt._id.toString()];
+        return {
+            ...apptObj,
+            prescriptionUrl: clinicalUrl || apptObj.prescriptionUrl || '',
+        };
+    });
 };
 
 /**
@@ -255,4 +276,174 @@ export const updateAppointmentStatus = async ({
 
     appointment.status = status;
     return appointmentRepository.save(appointment);
+};
+
+/**
+ * Verifies that an appointment exists, belongs to the doctor, and is in an active state
+ * eligible for consultation (BOOKED or CONFIRMED). Does NOT mutate status.
+ *
+ * @param {object} params
+ * @param {string} params.appointmentId  - Appointment._id
+ * @param {string} params.doctorProfileId - Canonical Doctor._id
+ * @returns {Promise<object>} Appointment document
+ */
+export const getAppointmentForConsultation = async ({ appointmentId, doctorProfileId }) => {
+    const appointment = await appointmentRepository.findById(appointmentId);
+    if (!appointment) {
+        const error = new Error('Appointment not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    if (appointment.doctor.toString() !== doctorProfileId.toString()) {
+        const error = new Error('Not authorized to update this appointment');
+        error.statusCode = 403;
+        throw error;
+    }
+
+    if (!['BOOKED', 'CONFIRMED'].includes(appointment.status)) {
+        const error = new Error('Can only complete a BOOKED or CONFIRMED appointment');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    return appointment;
+};
+
+
+/**
+ * Completes an appointment slot after verifying doctor ownership and valid status.
+ * Scheduling owns the lifecycle state transition to COMPLETED.
+ *
+ * @param {string|object} appointmentIdOrParams - Appointment._id or options object
+ * @param {string} [doctorProfileIdParam]      - Canonical Doctor._id
+ * @returns {Promise<object>} Updated appointment document populated for response
+ */
+export const completeAppointment = async (appointmentIdOrParams, doctorProfileIdParam) => {
+    let appointmentId;
+    let doctorProfileId;
+
+    if (typeof appointmentIdOrParams === 'object' && appointmentIdOrParams !== null && appointmentIdOrParams.appointmentId) {
+        appointmentId = appointmentIdOrParams.appointmentId;
+        doctorProfileId = appointmentIdOrParams.doctorProfileId;
+    } else {
+        appointmentId = appointmentIdOrParams;
+        doctorProfileId = doctorProfileIdParam;
+    }
+
+    const appointment = await appointmentRepository.findById(appointmentId);
+    if (!appointment) {
+        const error = new Error('Appointment not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    if (appointment.doctor.toString() !== doctorProfileId.toString()) {
+        const error = new Error('Not authorized to update this appointment');
+        error.statusCode = 403;
+        throw error;
+    }
+
+    if (!['BOOKED', 'CONFIRMED'].includes(appointment.status)) {
+        const error = new Error('Can only complete a BOOKED or CONFIRMED appointment');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    appointment.status = 'COMPLETED';
+    await appointmentRepository.save(appointment);
+
+    return appointmentRepository.findPopulatedConsultationById(appointmentId);
+};
+
+/**
+ * Retrieves appointment details with patient, clinic, doctor, and patient's past consultations with this doctor.
+ * Scheduling owns appointment metadata/lifecycle; Clinical owns clinical consultation details.
+ *
+ * @param {object} params
+ * @param {string} params.appointmentId  - Appointment._id
+ * @param {string} params.doctorProfileId - Canonical Doctor._id
+ * @returns {Promise<object>} { appointment, pastAppointments }
+ */
+export const getAppointmentDetails = async ({ appointmentId, doctorProfileId }) => {
+    const appointment = await appointmentRepository.findDetailsById(appointmentId);
+
+    if (!appointment) {
+        const error = new Error('Appointment not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    if (appointment.doctor._id.toString() !== doctorProfileId.toString()) {
+        const error = new Error('Not authorized to view this appointment');
+        error.statusCode = 403;
+        throw error;
+    }
+
+    // Fetch clinical data via Clinical facade
+    const [consultation, consultationHistory] = await Promise.all([
+        getConsultationByAppointmentId(appointmentId),
+        getPatientConsultationHistory({
+            patientId: appointment.patient._id,
+            doctorProfileId,
+            limit: 10,
+        }),
+    ]);
+
+    // Compose appointment object with canonical clinical fields
+    const appointmentObj = appointment.toObject ? appointment.toObject() : { ...appointment };
+    if (consultation) {
+        appointmentObj.diagnosis = consultation.diagnosis || appointmentObj.diagnosis || '';
+        appointmentObj.prescription = consultation.prescription || appointmentObj.prescription || '';
+        appointmentObj.consultationNotes = consultation.consultationNotes || appointmentObj.consultationNotes || '';
+        appointmentObj.prescriptionUrl = consultation.prescriptionUrl || appointmentObj.prescriptionUrl || '';
+    }
+
+    // Compose pastAppointments from clinical consultation history (excluding current encounter)
+    const pastAppointments = (consultationHistory || [])
+        .filter((c) => {
+            const isCurrentAppointment = c.appointment && (
+                (c.appointment._id && c.appointment._id.toString() === appointmentId.toString()) ||
+                c.appointment.toString() === appointmentId.toString()
+            );
+            const isCurrentConsultation = consultation && c._id.toString() === consultation._id.toString();
+            return !isCurrentAppointment && !isCurrentConsultation;
+        })
+        .map((c) => ({
+            _id: c._id,
+            date: c.consultationDate || (c.appointment && c.appointment.date) || (c.completedAt ? new Date(c.completedAt).toISOString().split('T')[0] : ''),
+            time: (c.appointment && c.appointment.time) || (c.completedAt ? new Date(c.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''),
+            status: 'COMPLETED',
+            diagnosis: c.diagnosis || '',
+            prescription: c.prescription || '',
+            consultationNotes: c.consultationNotes || '',
+            prescriptionUrl: c.prescriptionUrl || '',
+            clinic: c.clinic || null,
+            doctor: c.doctor || null,
+            originType: c.originType,
+        }));
+
+    return {
+        appointment: appointmentObj,
+        pastAppointments,
+    };
+};
+
+/**
+ * Returns appointment counts needed for admin platform analytics.
+ *
+ * @returns {Promise<object>} { totalAppointments, completedAppointments, pendingAppointments }
+ */
+export const getAppointmentStatsForAdmin = async () => {
+    const [totalAppointments, completedAppointments, pendingAppointments] = await Promise.all([
+        appointmentRepository.countAll(),
+        appointmentRepository.countByStatuses(['COMPLETED']),
+        appointmentRepository.countByStatuses(['BOOKED', 'PENDING']),
+    ]);
+
+    return {
+        totalAppointments,
+        completedAppointments,
+        pendingAppointments,
+    };
 };

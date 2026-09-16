@@ -1,10 +1,10 @@
-import DoctorLeave from '../models/doctorLeave.model.js';
-import Doctor from '../models/doctor.model.js';
+import * as doctorRepository from '../../../repositories/doctor.repository.js';
+import * as doctorLeaveService from '../services/doctorLeave.service.js';
 
 // GET /api/v1/leaves — all leaves for logged-in doctor
 export const getMyLeaves = async (req, res) => {
     try {
-        const doctorProfile = await Doctor.findOne({ user: req.user._id || req.user.id });
+        const doctorProfile = await doctorRepository.findByUserId(req.user._id || req.user.id);
         if (!doctorProfile) {
             return res.status(404).json({
                 success: false,
@@ -12,15 +12,19 @@ export const getMyLeaves = async (req, res) => {
             });
         }
 
-        const leaves = await DoctorLeave.find({
-            doctor: doctorProfile._id,
-        }).sort({ date: 1 });
+        const leaves = await doctorLeaveService.getMyLeaves(doctorProfile._id);
 
         res.status(200).json({
             success: true,
             data: leaves,
         });
     } catch (error) {
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({
+                success: false,
+                message: error.message,
+            });
+        }
         res.status(500).json({
             success: false,
             message: 'Failed to fetch leaves',
@@ -34,14 +38,7 @@ export const createLeave = async (req, res) => {
     try {
         const { date, reason } = req.body;
 
-        if (!date) {
-            return res.status(400).json({
-                success: false,
-                message: 'Date is required',
-            });
-        }
-
-        const doctorProfile = await Doctor.findOne({ user: req.user._id || req.user.id });
+        const doctorProfile = await doctorRepository.findByUserId(req.user._id || req.user.id);
         if (!doctorProfile) {
             return res.status(404).json({
                 success: false,
@@ -49,23 +46,10 @@ export const createLeave = async (req, res) => {
             });
         }
 
-        // Check for duplicate
-        const existing = await DoctorLeave.findOne({
-            doctor: doctorProfile._id,
+        const leave = await doctorLeaveService.createLeave({
+            doctorProfileId: doctorProfile._id,
             date,
-        });
-
-        if (existing) {
-            return res.status(400).json({
-                success: false,
-                message: 'Leave already exists for this date',
-            });
-        }
-
-        const leave = await DoctorLeave.create({
-            doctor: doctorProfile._id,
-            date,
-            reason: reason || '',
+            reason,
         });
 
         res.status(201).json({
@@ -73,6 +57,12 @@ export const createLeave = async (req, res) => {
             data: leave,
         });
     } catch (error) {
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({
+                success: false,
+                message: error.message,
+            });
+        }
         res.status(500).json({
             success: false,
             message: 'Failed to create leave',
@@ -86,7 +76,7 @@ export const deleteLeave = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const doctorProfile = await Doctor.findOne({ user: req.user._id || req.user.id });
+        const doctorProfile = await doctorRepository.findByUserId(req.user._id || req.user.id);
         if (!doctorProfile) {
             return res.status(404).json({
                 success: false,
@@ -94,25 +84,22 @@ export const deleteLeave = async (req, res) => {
             });
         }
 
-        const leave = await DoctorLeave.findOne({
-            _id: id,
-            doctor: doctorProfile._id,
+        await doctorLeaveService.deleteLeave({
+            leaveId: id,
+            doctorProfileId: doctorProfile._id,
         });
-
-        if (!leave) {
-            return res.status(404).json({
-                success: false,
-                message: 'Leave not found',
-            });
-        }
-
-        await DoctorLeave.deleteOne({ _id: id });
 
         res.status(200).json({
             success: true,
             message: 'Leave deleted successfully',
         });
     } catch (error) {
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({
+                success: false,
+                message: error.message,
+            });
+        }
         res.status(500).json({
             success: false,
             message: 'Failed to delete leave',

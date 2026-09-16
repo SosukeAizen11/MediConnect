@@ -2,10 +2,8 @@ import Doctor from '../models/doctor.model.js';
 import Clinic from '../models/clinic.model.js';
 import Token from '../models/token.model.js';
 import DoctorPost from '../models/post.model.js';
-import {
-    getDoctorAppointmentStats,
-    getCompletedAppointmentsByDoctor,
-} from '../modules/scheduling/index.js';
+import { getDoctorAppointmentStats } from '../modules/scheduling/index.js';
+import { getDoctorConsultedPatients } from '../modules/clinical/index.js';
 
 export const createDoctorProfile = async (req, res, next) => {
     try {
@@ -141,59 +139,7 @@ export const getMyPatients = async (req, res, next) => {
             doctorDoc = await Doctor.create({ user: req.user._id });
         }
 
-        // Patients from completed appointments — via Scheduling facade
-        const completedAppointments = await getCompletedAppointmentsByDoctor(doctorDoc._id);
-
-        // Patients from completed tokens (via doctor's clinic)
-        let completedTokens = [];
-        if (doctorDoc.clinic) {
-            completedTokens = await Token.find({
-                clinic: doctorDoc.clinic,
-                status: 'COMPLETED',
-            })
-                .populate('patient', 'name phone')
-                .sort({ date: -1 });
-        }
-
-        // Merge and deduplicate
-        const patientMap = new Map();
-
-        for (const apt of completedAppointments) {
-            if (!apt.patient) continue;
-            const pid = apt.patient._id.toString();
-            if (!patientMap.has(pid)) {
-                patientMap.set(pid, {
-                    patientId: pid,
-                    fullName: apt.patient.name,
-                    phone: apt.patient.phone || '',
-                    lastVisitDate: apt.date,
-                });
-            }
-        }
-
-        for (const tkn of completedTokens) {
-            if (!tkn.patient) continue;
-            const pid = tkn.patient._id.toString();
-            const visitDate = tkn.date ? new Date(tkn.date).toISOString().split('T')[0] : '';
-            if (!patientMap.has(pid)) {
-                patientMap.set(pid, {
-                    patientId: pid,
-                    fullName: tkn.patient.name,
-                    phone: tkn.patient.phone || '',
-                    lastVisitDate: visitDate,
-                });
-            } else {
-                // Update last visit date if this token is more recent
-                const existing = patientMap.get(pid);
-                if (visitDate && visitDate > existing.lastVisitDate) {
-                    existing.lastVisitDate = visitDate;
-                }
-            }
-        }
-
-        const patients = Array.from(patientMap.values()).sort((a, b) =>
-            b.lastVisitDate.localeCompare(a.lastVisitDate)
-        );
+        const patients = await getDoctorConsultedPatients(doctorDoc._id);
 
         res.status(200).json({
             success: true,

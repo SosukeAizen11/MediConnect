@@ -13,5 +13,24 @@ export {
     getPatientAppointments,
     getDoctorAppointments,
     updateAppointmentStatus,
-} from '../../services/appointment.service.js';
+    completeAppointment,
+    getAppointmentForConsultation,
+    getAppointmentDetails,
+    getAppointmentStatsForAdmin,
+} from './services/appointment.service.js';
+
+export {
+    createAvailability,
+    getMyAvailability,
+    updateAvailability,
+    deleteAvailability,
+} from './services/doctorAvailability.service.js';
+
+export {
+    getMyLeaves,
+    createLeave,
+    deleteLeave,
+} from './services/doctorLeave.service.js';
+
+
 

@@ -2,6 +2,12 @@ import Token from '../models/token.model.js';
 import Clinic from '../models/clinic.model.js';
 import Doctor from '../models/doctor.model.js';
 import { getIO } from '../socket.js';
+import {
+    completeTokenConsultation as completeTokenConsultationService,
+    getConsultationByTokenId,
+    getPatientConsultationHistory,
+} from '../modules/clinical/index.js';
+
 
 // Join token queue
 export const joinTokenQueue = async (req, res) => {
@@ -374,23 +380,51 @@ export const getTokenDetails = async (req, res) => {
             return res.status(403).json({ message: 'Not authorized to view this token' });
         }
 
-        // Get past completed tokens for this patient at this clinic
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        // Fetch clinical data via Clinical facade
+        const [consultation, consultationHistory] = await Promise.all([
+            getConsultationByTokenId(tokenId),
+            getPatientConsultationHistory({
+                patientId: token.patient._id,
+                doctorProfileId: doctorDoc._id,
+                limit: 10,
+            }),
+        ]);
 
-        const pastTokens = await Token.find({
-            patient: token.patient._id,
-            clinic: token.clinic._id,
-            status: 'COMPLETED',
-            _id: { $ne: tokenId },
-        })
-            .sort({ date: -1 })
-            .limit(10);
+        // Compose token object with canonical clinical fields
+        const tokenObj = token.toObject ? token.toObject() : { ...token };
+        if (consultation) {
+            tokenObj.diagnosis = consultation.diagnosis || tokenObj.diagnosis || '';
+            tokenObj.prescription = consultation.prescription || tokenObj.prescription || '';
+            tokenObj.consultationNotes = consultation.consultationNotes || tokenObj.consultationNotes || '';
+        }
+
+        // Compose pastTokens from clinical consultation history (excluding current token)
+        const pastTokens = (consultationHistory || [])
+            .filter((c) => {
+                const isCurrentToken = c.token && (
+                    (c.token._id && c.token._id.toString() === tokenId.toString()) ||
+                    c.token.toString() === tokenId.toString()
+                );
+                const isCurrentConsultation = consultation && c._id.toString() === consultation._id.toString();
+                return !isCurrentToken && !isCurrentConsultation;
+            })
+            .map((c) => ({
+                _id: c._id,
+                date: c.consultationDate || (c.completedAt ? new Date(c.completedAt).toISOString().split('T')[0] : ''),
+                tokenNumber: (c.token && c.token.tokenNumber) != null ? c.token.tokenNumber : (c.originType === 'APPOINTMENT' ? 'Appt' : ''),
+                status: 'COMPLETED',
+                diagnosis: c.diagnosis || '',
+                prescription: c.prescription || '',
+                consultationNotes: c.consultationNotes || '',
+                clinic: c.clinic || null,
+                doctor: c.doctor || null,
+                originType: c.originType,
+            }));
 
         res.status(200).json({
             success: true,
             data: {
-                token,
+                token: tokenObj,
                 pastTokens,
             },
         });
@@ -406,55 +440,19 @@ export const completeTokenConsultation = async (req, res) => {
         const { tokenId } = req.params;
         const { diagnosis, prescription, consultationNotes } = req.body;
 
-        if (!diagnosis) {
-            return res.status(400).json({ message: 'Diagnosis is required' });
-        }
-
         let doctorDoc = await Doctor.findOne({ user: req.user._id });
         if (!doctorDoc) {
             doctorDoc = await Doctor.create({ user: req.user._id });
         }
 
-        const token = await Token.findById(tokenId);
-        if (!token) {
-            return res.status(404).json({ message: 'Token not found' });
-        }
-
-        if (!doctorDoc.clinic || token.clinic.toString() !== doctorDoc.clinic.toString()) {
-            return res.status(403).json({ message: 'Not authorized to update this token' });
-        }
-
-        if (token.status !== 'CALLED') {
-            return res.status(400).json({ message: 'Can only complete a CALLED (serving) token' });
-        }
-
-        token.diagnosis = diagnosis;
-        token.prescription = prescription || '';
-        token.consultationNotes = consultationNotes || '';
-        token.status = 'COMPLETED';
-        await token.save();
-
-        // Emit real-time update
-        try {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            const io = getIO();
-            const waitingTokens = await Token.find({
-                clinic: doctorDoc.clinic,
-                date: today,
-                status: 'WAITING',
-            }).populate('patient', 'name email phone').sort({ tokenNumber: 1 });
-
-            // Since we just completed the token, current serving is likely null until advanced
-            // Or we could return the completed token. We'll return null to clear it.
-            io.to(`clinic:${doctorDoc.clinic.toString()}`).emit('token:update', {
-                currentToken: null,
-                waitingTokens
-            });
-        } catch (socketError) {
-            console.error('Socket emission error:', socketError);
-        }
+        const token = await completeTokenConsultationService({
+            tokenId,
+            doctorClinicId: doctorDoc.clinic,
+            doctorProfileId: doctorDoc._id,
+            diagnosis,
+            prescription,
+            consultationNotes,
+        });
 
         res.status(200).json({
             success: true,
@@ -462,7 +460,11 @@ export const completeTokenConsultation = async (req, res) => {
             data: token,
         });
     } catch (error) {
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({ message: error.message });
+        }
         console.error('Complete token consultation error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
+

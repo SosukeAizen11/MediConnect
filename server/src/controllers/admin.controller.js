@@ -1,9 +1,9 @@
 import Clinic from '../models/clinic.model.js';
 import Doctor from '../models/doctor.model.js';
 import User from '../models/user.model.js';
-import Appointment from '../models/appointment.model.js';
 import Token from '../models/token.model.js';
 import Post from '../models/post.model.js';
+import { getAppointmentStatsForAdmin } from '../modules/scheduling/index.js';
 
 // Get pending clinics (not approved)
 export const getPendingClinics = async (req, res) => {
@@ -238,9 +238,7 @@ export const getSystemAnalytics = async (req, res) => {
             appointmentClinics,
 
             // Appointment Data
-            totalAppointments,
-            completedAppointments,
-            pendingAppointments,
+            appointmentStats,
 
             // Token Data
             totalTokens,
@@ -264,10 +262,8 @@ export const getSystemAnalytics = async (req, res) => {
             Clinic.countDocuments({ clinicType: 'TOKEN' }),
             Clinic.countDocuments({ clinicType: 'APPOINTMENT' }),
 
-            // Appointments
-            Appointment.countDocuments(),
-            Appointment.countDocuments({ status: 'COMPLETED' }),
-            Appointment.countDocuments({ status: { $in: ['BOOKED', 'PENDING'] } }), // BOOKED is the default
+            // Appointments (via Scheduling facade)
+            getAppointmentStatsForAdmin(),
 
             // Tokens
             Token.countDocuments(),
@@ -277,6 +273,8 @@ export const getSystemAnalytics = async (req, res) => {
             // Posts
             Post.countDocuments(),
         ]);
+
+        const { totalAppointments, completedAppointments, pendingAppointments } = appointmentStats;
 
         res.json({
             success: true,
