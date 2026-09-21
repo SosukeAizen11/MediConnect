@@ -1,9 +1,10 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/user.model.js';
-import Doctor from '../models/doctor.model.js';
 import { config } from '../config/env.js';
 
 import mongoose from 'mongoose';
+
+import { getOrCreateDoctorProfile } from '../services/doctor.service.js';
 
 const generateToken = (id, role) => {
     return jwt.sign({ id, role }, config.JWT_SECRET, {
@@ -21,6 +22,7 @@ export const register = async (req, res, next) => {
         const { name, email, password, role } = req.body;
 
         const userExists = await User.findOne({ email });
+
         if (userExists) {
             res.status(400);
             throw new Error('User already exists');
@@ -36,7 +38,7 @@ export const register = async (req, res, next) => {
         if (user) {
             // Auto-create Doctor profile for DOCTOR users
             if (user.role === 'DOCTOR') {
-                await Doctor.create({ user: user._id });
+                await getOrCreateDoctorProfile(user._id);
             }
 
             res.status(201).json({
@@ -72,12 +74,9 @@ export const login = async (req, res, next) => {
                 throw new Error('Your account has been disabled by admin');
             }
 
-            // Auto-create Doctor profile if missing (for legacy DOCTOR accounts)
+            // Ensure legacy DOCTOR accounts have a Doctor profile
             if (user.role === 'DOCTOR') {
-                const existingProfile = await Doctor.findOne({ user: user._id });
-                if (!existingProfile) {
-                    await Doctor.create({ user: user._id });
-                }
+                await getOrCreateDoctorProfile(user._id);
             }
 
             res.json({

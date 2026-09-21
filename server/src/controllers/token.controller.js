@@ -2,11 +2,14 @@ import Token from '../models/token.model.js';
 import Clinic from '../models/clinic.model.js';
 import Doctor from '../models/doctor.model.js';
 import { getIO } from '../socket.js';
+
 import {
     completeTokenConsultation as completeTokenConsultationService,
     getConsultationByTokenId,
     getPatientConsultationHistory,
 } from '../modules/clinical/index.js';
+
+import { getOrCreateDoctorProfile } from '../services/doctor.service.js';
 
 
 // Join token queue
@@ -76,21 +79,24 @@ export const joinTokenQueue = async (req, res) => {
         // Emit real-time update to the specific clinic room
         try {
             const io = getIO();
+
             const waitingTokens = await Token.find({
                 clinic: clinicId,
                 date: today,
                 status: 'WAITING',
-            }).populate('patient', 'name email phone').sort({ tokenNumber: 1 });
+            })
+                .populate('patient', 'name email phone')
+                .sort({ tokenNumber: 1 });
 
             const currentServing = await Token.findOne({
                 clinic: clinicId,
                 date: today,
-                status: 'CALLED'
+                status: 'CALLED',
             }).populate('patient', 'name email phone');
 
             io.to(`clinic:${clinicId.toString()}`).emit('token:update', {
                 currentToken: currentServing || null,
-                waitingTokens
+                waitingTokens,
             });
         } catch (socketError) {
             console.error('Socket emission error:', socketError);
@@ -107,6 +113,7 @@ export const joinTokenQueue = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
+
 
 // Get patient's active tokens
 export const getPatientTokens = async (req, res) => {
@@ -129,6 +136,7 @@ export const getPatientTokens = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
+
 
 // Get patient's current active token with queue status
 export const getMyToken = async (req, res) => {
@@ -160,6 +168,7 @@ export const getMyToken = async (req, res) => {
         }).sort({ tokenNumber: 1 });
 
         let currentToken = 0;
+
         if (currentServingToken) {
             currentToken = currentServingToken.tokenNumber;
         } else {
@@ -168,6 +177,7 @@ export const getMyToken = async (req, res) => {
                 date: today,
                 status: 'COMPLETED',
             }).sort({ tokenNumber: -1 });
+
             currentToken = lastCompleted ? lastCompleted.tokenNumber : 0;
         }
 
@@ -198,13 +208,11 @@ export const getMyToken = async (req, res) => {
     }
 };
 
+
 // Doctor: Get token queue for their clinic
 export const getDoctorTokenQueue = async (req, res) => {
     try {
-        let doctorDoc = await Doctor.findOne({ user: req.user._id });
-        if (!doctorDoc) {
-            doctorDoc = await Doctor.create({ user: req.user._id });
-        }
+        const doctorDoc = await getOrCreateDoctorProfile(req.user._id);
 
         if (!doctorDoc.clinic) {
             return res.status(400).json({
@@ -213,6 +221,7 @@ export const getDoctorTokenQueue = async (req, res) => {
         }
 
         const clinic = await Clinic.findById(doctorDoc.clinic);
+
         if (!clinic) {
             return res.status(404).json({ message: 'Clinic not found' });
         }
@@ -264,13 +273,11 @@ export const getDoctorTokenQueue = async (req, res) => {
     }
 };
 
+
 // Doctor: Advance to next token
 export const advanceToken = async (req, res) => {
     try {
-        let doctorDoc = await Doctor.findOne({ user: req.user._id });
-        if (!doctorDoc) {
-            doctorDoc = await Doctor.create({ user: req.user._id });
-        }
+        const doctorDoc = await getOrCreateDoctorProfile(req.user._id);
 
         if (!doctorDoc.clinic) {
             return res.status(400).json({
@@ -307,7 +314,8 @@ export const advanceToken = async (req, res) => {
 
         // Return updated queue
         const updatedCurrentToken = nextToken
-            ? await Token.findById(nextToken._id).populate('patient', 'name email phone')
+            ? await Token.findById(nextToken._id)
+                .populate('patient', 'name email phone')
             : null;
 
         const waitingTokens = await Token.find({
@@ -329,9 +337,10 @@ export const advanceToken = async (req, res) => {
         // Emit real-time update to the specific clinic room
         try {
             const io = getIO();
+
             io.to(`clinic:${doctorDoc.clinic.toString()}`).emit('token:update', {
                 currentToken: updatedCurrentToken || null,
-                waitingTokens
+                waitingTokens,
             });
         } catch (socketError) {
             console.error('Socket emission error:', socketError);
@@ -357,18 +366,19 @@ export const advanceToken = async (req, res) => {
     }
 };
 
+
 // Doctor: Get token details for consultation
 export const getTokenDetails = async (req, res) => {
     try {
         const { tokenId } = req.params;
 
-        let doctorDoc = await Doctor.findOne({ user: req.user._id });
-        if (!doctorDoc) {
-            doctorDoc = await Doctor.create({ user: req.user._id });
-        }
+        const doctorDoc = await getOrCreateDoctorProfile(req.user._id);
 
         const token = await Token.findById(tokenId)
-            .populate('patient', 'name email phone gender dateOfBirth address emergencyContact')
+            .populate(
+                'patient',
+                'name email phone gender dateOfBirth address emergencyContact'
+            )
             .populate('clinic', 'name address');
 
         if (!token) {
@@ -376,8 +386,13 @@ export const getTokenDetails = async (req, res) => {
         }
 
         // Verify this token belongs to doctor's clinic
-        if (!doctorDoc.clinic || token.clinic._id.toString() !== doctorDoc.clinic.toString()) {
-            return res.status(403).json({ message: 'Not authorized to view this token' });
+        if (
+            !doctorDoc.clinic ||
+            token.clinic._id.toString() !== doctorDoc.clinic.toString()
+        ) {
+            return res.status(403).json({
+                message: 'Not authorized to view this token',
+            });
         }
 
         // Fetch clinical data via Clinical facade
@@ -392,26 +407,47 @@ export const getTokenDetails = async (req, res) => {
 
         // Compose token object with canonical clinical fields
         const tokenObj = token.toObject ? token.toObject() : { ...token };
+
         if (consultation) {
             tokenObj.diagnosis = consultation.diagnosis || tokenObj.diagnosis || '';
-            tokenObj.prescription = consultation.prescription || tokenObj.prescription || '';
-            tokenObj.consultationNotes = consultation.consultationNotes || tokenObj.consultationNotes || '';
+            tokenObj.prescription =
+                consultation.prescription || tokenObj.prescription || '';
+            tokenObj.consultationNotes =
+                consultation.consultationNotes ||
+                tokenObj.consultationNotes ||
+                '';
         }
 
-        // Compose pastTokens from clinical consultation history (excluding current token)
+        // Compose pastTokens from clinical consultation history
         const pastTokens = (consultationHistory || [])
             .filter((c) => {
-                const isCurrentToken = c.token && (
-                    (c.token._id && c.token._id.toString() === tokenId.toString()) ||
-                    c.token.toString() === tokenId.toString()
-                );
-                const isCurrentConsultation = consultation && c._id.toString() === consultation._id.toString();
+                const isCurrentToken =
+                    c.token &&
+                    (
+                        (c.token._id &&
+                            c.token._id.toString() === tokenId.toString()) ||
+                        c.token.toString() === tokenId.toString()
+                    );
+
+                const isCurrentConsultation =
+                    consultation &&
+                    c._id.toString() === consultation._id.toString();
+
                 return !isCurrentToken && !isCurrentConsultation;
             })
             .map((c) => ({
                 _id: c._id,
-                date: c.consultationDate || (c.completedAt ? new Date(c.completedAt).toISOString().split('T')[0] : ''),
-                tokenNumber: (c.token && c.token.tokenNumber) != null ? c.token.tokenNumber : (c.originType === 'APPOINTMENT' ? 'Appt' : ''),
+                date:
+                    c.consultationDate ||
+                    (c.completedAt
+                        ? new Date(c.completedAt).toISOString().split('T')[0]
+                        : ''),
+                tokenNumber:
+                    c.token && c.token.tokenNumber != null
+                        ? c.token.tokenNumber
+                        : c.originType === 'APPOINTMENT'
+                            ? 'Appt'
+                            : '',
                 status: 'COMPLETED',
                 diagnosis: c.diagnosis || '',
                 prescription: c.prescription || '',
@@ -434,16 +470,18 @@ export const getTokenDetails = async (req, res) => {
     }
 };
 
+
 // Doctor: Complete token consultation
 export const completeTokenConsultation = async (req, res) => {
     try {
         const { tokenId } = req.params;
-        const { diagnosis, prescription, consultationNotes } = req.body;
+        const {
+            diagnosis,
+            prescription,
+            consultationNotes,
+        } = req.body;
 
-        let doctorDoc = await Doctor.findOne({ user: req.user._id });
-        if (!doctorDoc) {
-            doctorDoc = await Doctor.create({ user: req.user._id });
-        }
+        const doctorDoc = await getOrCreateDoctorProfile(req.user._id);
 
         const token = await completeTokenConsultationService({
             tokenId,
@@ -461,10 +499,12 @@ export const completeTokenConsultation = async (req, res) => {
         });
     } catch (error) {
         if (error.statusCode) {
-            return res.status(error.statusCode).json({ message: error.message });
+            return res.status(error.statusCode).json({
+                message: error.message,
+            });
         }
+
         console.error('Complete token consultation error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
-

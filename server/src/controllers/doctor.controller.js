@@ -2,8 +2,11 @@ import Doctor from '../models/doctor.model.js';
 import Clinic from '../models/clinic.model.js';
 import Token from '../models/token.model.js';
 import DoctorPost from '../models/post.model.js';
+
 import { getDoctorAppointmentStats } from '../modules/scheduling/index.js';
 import { getDoctorConsultedPatients } from '../modules/clinical/index.js';
+
+import { getOrCreateDoctorProfile } from '../services/doctor.service.js';
 
 export const createDoctorProfile = async (req, res, next) => {
     try {
@@ -51,17 +54,18 @@ export const createDoctorProfile = async (req, res, next) => {
 
 export const getDoctorProfile = async (req, res, next) => {
     try {
-        let doctor = await Doctor.findOne({ user: req.user._id })
-            .populate('user', 'name email phone')
-            .populate('clinic', 'name address clinicType isApproved isActive');
+        const doctor = await getOrCreateDoctorProfile(req.user._id);
 
-        // Lazy creation: auto-create profile if missing
-        if (!doctor) {
-            await Doctor.create({ user: req.user._id });
-            doctor = await Doctor.findOne({ user: req.user._id })
-                .populate('user', 'name email phone')
-                .populate('clinic', 'name address clinicType isApproved isActive');
-        }
+        await doctor.populate([
+            {
+                path: 'user',
+                select: 'name email phone',
+            },
+            {
+                path: 'clinic',
+                select: 'name address clinicType isApproved isActive',
+            },
+        ]);
 
         res.status(200).json({
             success: true,
@@ -77,6 +81,7 @@ export const updateDoctorProfile = async (req, res, next) => {
         const { clinic, specialization, experienceYears } = req.body;
 
         const doctor = await Doctor.findOne({ user: req.user._id });
+
         if (!doctor) {
             res.status(404);
             return next(new Error('Doctor profile not found'));
@@ -85,19 +90,27 @@ export const updateDoctorProfile = async (req, res, next) => {
         // Validate clinic if provided
         if (clinic) {
             const clinicDoc = await Clinic.findById(clinic);
+
             if (!clinicDoc) {
                 res.status(404);
                 return next(new Error('Clinic not found'));
             }
+
             if (!clinicDoc.isApproved) {
                 res.status(400);
                 return next(new Error('Cannot link to unapproved clinic'));
             }
+
             doctor.clinic = clinic;
         }
 
-        if (specialization !== undefined) doctor.specialization = specialization;
-        if (experienceYears !== undefined) doctor.experienceYears = experienceYears;
+        if (specialization !== undefined) {
+            doctor.specialization = specialization;
+        }
+
+        if (experienceYears !== undefined) {
+            doctor.experienceYears = experienceYears;
+        }
 
         await doctor.save();
 
@@ -134,10 +147,7 @@ export const getDoctorsByClinic = async (req, res, next) => {
 
 export const getMyPatients = async (req, res, next) => {
     try {
-        let doctorDoc = await Doctor.findOne({ user: req.user._id });
-        if (!doctorDoc) {
-            doctorDoc = await Doctor.create({ user: req.user._id });
-        }
+        const doctorDoc = await getOrCreateDoctorProfile(req.user._id);
 
         const patients = await getDoctorConsultedPatients(doctorDoc._id);
 
@@ -154,24 +164,33 @@ export const getMyPatients = async (req, res, next) => {
 export const getDashboardStats = async (req, res, next) => {
     try {
         const doctorDoc = await Doctor.findOne({ user: req.user._id });
+
         if (!doctorDoc) {
-            return res.status(404).json({ success: false, message: 'Doctor profile not found' });
+            return res.status(404).json({
+                success: false,
+                message: 'Doctor profile not found',
+            });
         }
 
         const doctorId = doctorDoc._id;
 
         // 1. Total Posts
-        const totalPosts = await DoctorPost.countDocuments({ author: req.user._id });
+        const totalPosts = await DoctorPost.countDocuments({
+            author: req.user._id,
+        });
 
         // 2 & 3. Today's and Pending Appointments — via Scheduling facade
         const today = new Date();
         const dateString = today.toISOString().split('T')[0];
 
-        const { todayCount: todayAppointments, pendingCount: pendingAppointments } =
-            await getDoctorAppointmentStats(doctorId, dateString);
+        const {
+            todayCount: todayAppointments,
+            pendingCount: pendingAppointments,
+        } = await getDoctorAppointmentStats(doctorId, dateString);
 
         // 4. Active Tokens
         let activeTokens = 0;
+
         if (doctorDoc.clinic) {
             const todayDate = new Date();
             todayDate.setHours(0, 0, 0, 0);
@@ -179,7 +198,7 @@ export const getDashboardStats = async (req, res, next) => {
             activeTokens = await Token.countDocuments({
                 clinic: doctorDoc.clinic,
                 date: todayDate,
-                status: 'WAITING'
+                status: 'WAITING',
             });
         }
 
@@ -188,9 +207,8 @@ export const getDashboardStats = async (req, res, next) => {
             totalPosts,
             todayAppointments,
             pendingAppointments,
-            activeTokens
+            activeTokens,
         });
-
     } catch (error) {
         next(error);
     }

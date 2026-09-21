@@ -1,4 +1,5 @@
 import Doctor from '../../../models/doctor.model.js';
+
 import {
     bookAppointment as bookAppointmentService,
     getPatientAppointments as getPatientAppointmentsService,
@@ -6,7 +7,15 @@ import {
     updateAppointmentStatus as updateAppointmentStatusService,
     getAppointmentDetails as getAppointmentDetailsService,
 } from '../services/appointment.service.js';
-import { completeConsultation as completeConsultationService } from '../../clinical/index.js';
+
+import {
+    completeConsultation as completeConsultationService,
+} from '../../clinical/index.js';
+
+import {
+    getOrCreateDoctorProfile,
+} from '../../../services/doctor.service.js';
+
 
 export const bookAppointment = async (req, res, next) => {
     try {
@@ -14,7 +23,9 @@ export const bookAppointment = async (req, res, next) => {
 
         if (!doctorId || !date || !time) {
             res.status(400);
-            return next(new Error('Please provide doctorId, date, and time'));
+            return next(
+                new Error('Please provide doctorId, date, and time')
+            );
         }
 
         const appointment = await bookAppointmentService({
@@ -34,10 +45,13 @@ export const bookAppointment = async (req, res, next) => {
     }
 };
 
+
 export const getPatientAppointments = async (req, res, next) => {
     try {
         const patientId = req.user._id || req.user.id;
-        const appointments = await getPatientAppointmentsService(patientId);
+
+        const appointments =
+            await getPatientAppointmentsService(patientId);
 
         res.status(200).json({
             success: true,
@@ -49,20 +63,16 @@ export const getPatientAppointments = async (req, res, next) => {
     }
 };
 
+
 export const getDoctorAppointments = async (req, res, next) => {
     try {
         const doctorId = req.user._id || req.user.id;
 
-        // Find doctor profile for logged-in user
-        let doctorDoc = await Doctor.findOne({ user: doctorId });
+        const doctorDoc =
+            await getOrCreateDoctorProfile(doctorId);
 
-        // Lazy creation: auto-create profile if missing
-        if (!doctorDoc) {
-            doctorDoc = await Doctor.create({ user: doctorId });
-        }
-
-        // Query appointments using canonical Doctor profile _id via Scheduling facade/service
-        const appointments = await getDoctorAppointmentsService(doctorDoc._id);
+        const appointments =
+            await getDoctorAppointmentsService(doctorDoc._id);
 
         res.status(200).json({
             success: true,
@@ -73,23 +83,28 @@ export const getDoctorAppointments = async (req, res, next) => {
     }
 };
 
+
 export const updateAppointmentStatus = async (req, res, next) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
 
-        // Find doctor profile for logged-in user
-        const doctorDoc = await Doctor.findOne({ user: req.user._id });
+        const doctorDoc =
+            await Doctor.findOne({ user: req.user._id });
+
         if (!doctorDoc) {
             res.status(404);
-            return next(new Error('Doctor profile not found'));
+            return next(
+                new Error('Doctor profile not found')
+            );
         }
 
-        const appointment = await updateAppointmentStatusService({
-            appointmentId: id,
-            doctorProfileId: doctorDoc._id,
-            status,
-        });
+        const appointment =
+            await updateAppointmentStatusService({
+                appointmentId: id,
+                doctorProfileId: doctorDoc._id,
+                status,
+            });
 
         res.status(200).json({
             success: true,
@@ -99,29 +114,41 @@ export const updateAppointmentStatus = async (req, res, next) => {
         if (error.statusCode) {
             res.status(error.statusCode);
         }
+
         next(error);
     }
 };
 
+
 export const completeConsultation = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { diagnosis, prescription, consultationNotes } = req.body;
 
-        const doctorDoc = await Doctor.findOne({ user: req.user._id });
-        if (!doctorDoc) {
-            res.status(404);
-            return next(new Error('Doctor profile not found'));
-        }
-
-        const updated = await completeConsultationService({
-            appointmentId: id,
-            doctorProfileId: doctorDoc._id,
-            doctorName: req.user.name,
+        const {
             diagnosis,
             prescription,
             consultationNotes,
-        });
+        } = req.body;
+
+        const doctorDoc =
+            await Doctor.findOne({ user: req.user._id });
+
+        if (!doctorDoc) {
+            res.status(404);
+            return next(
+                new Error('Doctor profile not found')
+            );
+        }
+
+        const updated =
+            await completeConsultationService({
+                appointmentId: id,
+                doctorProfileId: doctorDoc._id,
+                doctorName: req.user.name,
+                diagnosis,
+                prescription,
+                consultationNotes,
+            });
 
         res.status(200).json({
             success: true,
@@ -132,24 +159,31 @@ export const completeConsultation = async (req, res, next) => {
         if (error.statusCode) {
             res.status(error.statusCode);
         }
+
         next(error);
     }
 };
+
 
 export const getAppointmentDetails = async (req, res, next) => {
     try {
         const { id } = req.params;
 
-        const doctorDoc = await Doctor.findOne({ user: req.user._id });
+        const doctorDoc =
+            await Doctor.findOne({ user: req.user._id });
+
         if (!doctorDoc) {
             res.status(404);
-            return next(new Error('Doctor profile not found'));
+            return next(
+                new Error('Doctor profile not found')
+            );
         }
 
-        const data = await getAppointmentDetailsService({
-            appointmentId: id,
-            doctorProfileId: doctorDoc._id,
-        });
+        const data =
+            await getAppointmentDetailsService({
+                appointmentId: id,
+                doctorProfileId: doctorDoc._id,
+            });
 
         res.status(200).json({
             success: true,
@@ -159,6 +193,7 @@ export const getAppointmentDetails = async (req, res, next) => {
         if (error.statusCode) {
             res.status(error.statusCode);
         }
+
         next(error);
     }
 };
