@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import Appointment from '../modules/scheduling/models/appointment.model.js';
-import Token from '../models/token.model.js';
+import Token from '../modules/queue/models/token.model.js';
 import Consultation from '../modules/clinical/models/consultation.model.js';
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/mediconnect';

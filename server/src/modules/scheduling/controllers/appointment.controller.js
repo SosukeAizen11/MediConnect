@@ -1,5 +1,3 @@
-import Doctor from '../../../models/doctor.model.js';
-
 import {
     bookAppointment as bookAppointmentService,
     getPatientAppointments as getPatientAppointmentsService,
@@ -66,10 +64,7 @@ export const getPatientAppointments = async (req, res, next) => {
 
 export const getDoctorAppointments = async (req, res, next) => {
     try {
-        const doctorId = req.user._id || req.user.id;
-
-        const doctorDoc =
-            await getOrCreateDoctorProfile(doctorId);
+        const doctorDoc = await getOrCreateDoctorProfile(req.user._id || req.user.id);
 
         const appointments =
             await getDoctorAppointmentsService(doctorDoc._id);
@@ -89,15 +84,7 @@ export const updateAppointmentStatus = async (req, res, next) => {
         const { id } = req.params;
         const { status } = req.body;
 
-        const doctorDoc =
-            await Doctor.findOne({ user: req.user._id });
-
-        if (!doctorDoc) {
-            res.status(404);
-            return next(
-                new Error('Doctor profile not found')
-            );
-        }
+        const doctorDoc = await getOrCreateDoctorProfile(req.user._id);
 
         const appointment =
             await updateAppointmentStatusService({
@@ -130,15 +117,7 @@ export const completeConsultation = async (req, res, next) => {
             consultationNotes,
         } = req.body;
 
-        const doctorDoc =
-            await Doctor.findOne({ user: req.user._id });
-
-        if (!doctorDoc) {
-            res.status(404);
-            return next(
-                new Error('Doctor profile not found')
-            );
-        }
+        const doctorDoc = await getOrCreateDoctorProfile(req.user._id);
 
         const updated =
             await completeConsultationService({
@@ -169,15 +148,7 @@ export const getAppointmentDetails = async (req, res, next) => {
     try {
         const { id } = req.params;
 
-        const doctorDoc =
-            await Doctor.findOne({ user: req.user._id });
-
-        if (!doctorDoc) {
-            res.status(404);
-            return next(
-                new Error('Doctor profile not found')
-            );
-        }
+        const doctorDoc = await getOrCreateDoctorProfile(req.user._id);
 
         const data =
             await getAppointmentDetailsService({

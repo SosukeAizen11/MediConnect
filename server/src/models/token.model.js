@@ -1,42 +1,15 @@
-import mongoose from 'mongoose';
-
-const tokenSchema = new mongoose.Schema({
-    patient: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
-    },
-    clinic: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Clinic',
-        required: true,
-    },
-    tokenNumber: {
-        type: Number,
-        required: true,
-    },
-    date: {
-        type: Date,
-        required: true,
-        default: () => {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            return today;
-        },
-    },
-    status: {
-        type: String,
-        enum: ['WAITING', 'CALLED', 'COMPLETED', 'CANCELLED'],
-        default: 'WAITING',
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now,
-    },
-});
-
-// Compound index for unique token per clinic per day
-tokenSchema.index({ clinic: 1, date: 1, tokenNumber: 1 }, { unique: true });
-
-const Token = mongoose.model('Token', tokenSchema);
-export default Token;
+/**
+ * MOVED: This file has been relocated to the Queue module.
+ *
+ * New location: modules/queue/models/token.model.js
+ *
+ * Update your import:
+ *   FROM: ../models/token.model.js   (or equivalent relative path)
+ *   TO:   ../modules/queue/models/token.model.js
+ *
+ * This file is intentionally empty and will throw if imported directly.
+ */
+throw new Error(
+    '[MediConnect] models/token.model.js has moved to modules/queue/models/token.model.js. ' +
+    'Update the import in the file that triggered this error.'
+);

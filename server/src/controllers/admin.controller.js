@@ -1,7 +1,7 @@
 import Clinic from '../models/clinic.model.js';
 import Doctor from '../models/doctor.model.js';
 import User from '../models/user.model.js';
-import Token from '../models/token.model.js';
+import Token from '../modules/queue/models/token.model.js';
 import Post from '../models/post.model.js';
 import { getAppointmentStatsForAdmin } from '../modules/scheduling/index.js';
 

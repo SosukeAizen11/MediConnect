@@ -2,7 +2,7 @@ import * as doctorRepository from '../../../repositories/doctor.repository.js';
 import * as doctorLeaveRepository from '../repositories/doctorLeave.repository.js';
 import * as doctorAvailabilityRepository from '../repositories/doctorAvailability.repository.js';
 import * as appointmentRepository from '../repositories/appointment.repository.js';
-import { generateSlots } from '../../../utils/slotGenerator.js';
+import { generateSlots } from '../utils/slotGenerator.js';
 import {
     getConsultationByAppointmentId,
     getPatientConsultationHistory,

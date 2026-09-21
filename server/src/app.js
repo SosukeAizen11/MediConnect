@@ -5,7 +5,7 @@ import authRoutes from './routes/auth.routes.js';
 import clinicRoutes from './routes/clinic.routes.js';
 import doctorRoutes from './routes/doctor.routes.js';
 import appointmentRoutes from './modules/scheduling/routes/appointment.routes.js';
-import tokenRoutes from './routes/token.routes.js';
+import tokenRoutes from './modules/queue/routes/token.routes.js';
 import patientRoutes from './routes/patient.routes.js';
 import postRoutes from './routes/post.routes.js';
 import adminRoutes from './routes/admin.routes.js';

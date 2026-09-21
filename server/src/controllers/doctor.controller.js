@@ -1,6 +1,6 @@
 import Doctor from '../models/doctor.model.js';
 import Clinic from '../models/clinic.model.js';
-import Token from '../models/token.model.js';
+import Token from '../modules/queue/models/token.model.js';
 import DoctorPost from '../models/post.model.js';
 
 import { getDoctorAppointmentStats } from '../modules/scheduling/index.js';

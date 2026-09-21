@@ -1,5 +1,6 @@
 import Clinic from '../models/clinic.model.js';
 import Doctor from '../models/doctor.model.js';
+import { approveClinic as approveClinicService } from '../services/clinic.service.js';
 
 export const registerClinic = async (req, res, next) => {
     try {
@@ -80,21 +81,16 @@ export const getClinicById = async (req, res, next) => {
 
 export const approveClinic = async (req, res, next) => {
     try {
-        const clinic = await Clinic.findById(req.params.id);
-
-        if (!clinic) {
-            res.status(404);
-            return next(new Error('Clinic not found'));
-        }
-
-        clinic.isApproved = true;
-        await clinic.save();
+        const clinic = await approveClinicService(req.params.id);
 
         res.status(200).json({
             success: true,
             data: clinic,
         });
     } catch (error) {
+        if (error.statusCode) {
+            res.status(error.statusCode);
+        }
         next(error);
     }
 };
