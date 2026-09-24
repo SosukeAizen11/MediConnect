@@ -1,4 +1,4 @@
-import * as doctorRepository from '../../../repositories/doctor.repository.js';
+import { findDoctorByUserId } from '../../identity/index.js';
 import * as doctorAvailabilityService from '../services/doctorAvailability.service.js';
 
 // Create availability
@@ -7,7 +7,7 @@ export const createAvailability = async (req, res) => {
     try {
         const { dayOfWeek, startTime, endTime, slotDuration } = req.body;
 
-        const doctorProfile = await doctorRepository.findByUserId(req.user._id || req.user.id);
+        const doctorProfile = await findDoctorByUserId(req.user._id || req.user.id);
         if (!doctorProfile) {
             return res.status(404).json({
                 success: false,
@@ -45,7 +45,7 @@ export const createAvailability = async (req, res) => {
 // Get all availability entries for logged-in doctor
 export const getMyAvailability = async (req, res) => {
     try {
-        const doctorProfile = await doctorRepository.findByUserId(req.user._id || req.user.id);
+        const doctorProfile = await findDoctorByUserId(req.user._id || req.user.id);
         if (!doctorProfile) {
             return res.status(404).json({
                 success: false,
@@ -80,7 +80,7 @@ export const updateAvailability = async (req, res) => {
         const { startTime, endTime, slotDuration } = req.body;
         const { id } = req.params;
 
-        const doctorProfile = await doctorRepository.findByUserId(req.user._id || req.user.id);
+        const doctorProfile = await findDoctorByUserId(req.user._id || req.user.id);
         if (!doctorProfile) {
             return res.status(404).json({
                 success: false,
@@ -120,7 +120,7 @@ export const deleteAvailability = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const doctorProfile = await doctorRepository.findByUserId(req.user._id || req.user.id);
+        const doctorProfile = await findDoctorByUserId(req.user._id || req.user.id);
         if (!doctorProfile) {
             return res.status(404).json({
                 success: false,

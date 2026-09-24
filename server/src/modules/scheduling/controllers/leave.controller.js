@@ -1,10 +1,10 @@
-import * as doctorRepository from '../../../repositories/doctor.repository.js';
+import { findDoctorByUserId } from '../../identity/index.js';
 import * as doctorLeaveService from '../services/doctorLeave.service.js';
 
 // GET /api/v1/leaves — all leaves for logged-in doctor
 export const getMyLeaves = async (req, res) => {
     try {
-        const doctorProfile = await doctorRepository.findByUserId(req.user._id || req.user.id);
+        const doctorProfile = await findDoctorByUserId(req.user._id || req.user.id);
         if (!doctorProfile) {
             return res.status(404).json({
                 success: false,
@@ -38,7 +38,7 @@ export const createLeave = async (req, res) => {
     try {
         const { date, reason } = req.body;
 
-        const doctorProfile = await doctorRepository.findByUserId(req.user._id || req.user.id);
+        const doctorProfile = await findDoctorByUserId(req.user._id || req.user.id);
         if (!doctorProfile) {
             return res.status(404).json({
                 success: false,
@@ -76,7 +76,7 @@ export const deleteLeave = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const doctorProfile = await doctorRepository.findByUserId(req.user._id || req.user.id);
+        const doctorProfile = await findDoctorByUserId(req.user._id || req.user.id);
         if (!doctorProfile) {
             return res.status(404).json({
                 success: false,

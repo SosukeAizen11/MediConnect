@@ -1,10 +1,10 @@
 import jwt from 'jsonwebtoken';
-import User from '../models/user.model.js';
+import User from '../modules/identity/models/user.model.js';
 import { config } from '../config/env.js';
 
 import mongoose from 'mongoose';
 
-import { getOrCreateDoctorProfile } from '../services/doctor.service.js';
+import { getOrCreateDoctorProfile } from '../modules/identity/index.js';
 
 const generateToken = (id, role) => {
     return jwt.sign({ id, role }, config.JWT_SECRET, {

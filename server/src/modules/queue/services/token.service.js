@@ -357,3 +357,37 @@ export const completeToken = async ({ tokenId, doctorClinicId }) => {
 
     return token;
 };
+
+// ─── Analytics / dashboard (called via Queue facade) ──────────────────────────
+
+/**
+ * Returns token counts needed for admin platform analytics.
+ * Preserves existing status filters exactly, including the legacy 'SERVING' value.
+ *
+ * @returns {Promise<{ totalTokens: number, activeTokens: number, completedTokens: number }>}
+ */
+export const getTokenStatsForAdmin = async () => {
+    const [totalTokens, activeTokens, completedTokens] = await Promise.all([
+        tokenRepository.countAll(),
+        tokenRepository.countByStatuses(['WAITING', 'SERVING', 'CALLED']),
+        tokenRepository.countByStatuses(['COMPLETED']),
+    ]);
+
+    return {
+        totalTokens,
+        activeTokens,
+        completedTokens,
+    };
+};
+
+/**
+ * Counts WAITING tokens for a clinic on a given date.
+ * Caller owns date normalization (e.g. local midnight) to preserve existing semantics.
+ *
+ * @param {string|object} clinicId
+ * @param {Date} date
+ * @returns {Promise<number>}
+ */
+export const countWaitingTokensByClinic = async (clinicId, date) => {
+    return tokenRepository.countWaitingByClinicAndDate(clinicId, date);
+};

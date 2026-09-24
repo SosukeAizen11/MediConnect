@@ -1,6 +1,6 @@
 import streamifier from 'streamifier';
 import cloudinary from '../../../config/cloudinary.js';
-import User from '../../../models/user.model.js';
+import User from '../../identity/models/user.model.js';
 import { generatePrescriptionPDF } from '../../../utils/generatePrescription.js';
 import {
     getAppointmentForConsultation,
@@ -136,12 +136,11 @@ const uploadPrescriptionToCloudinary = (buffer) => {
  * 2. Verifies appointment exists, belongs to doctor, and is active without mutating status (Scheduling).
  * 3. Generates prescription PDF and uploads to Cloudinary (Clinical document pipeline).
  * 4. Creates canonical Consultation record using createConsultation() / consultation repository.
- * 5. Temporarily persists clinical fields onto Appointment via the Scheduling persistence facade.
- * 6. Transitions appointment lifecycle status to COMPLETED via the Scheduling facade.
+ * 5. Transitions appointment lifecycle status to COMPLETED via the Scheduling facade.
  *
- * NOTE: The appointment is only marked COMPLETED after the clinical record and legacy fields have been
- * successfully saved. Cloudinary upload failure is non-fatal: if it fails, consultation completion proceeds
- * without a PDF URL, matching the established product behavior.
+ * NOTE: The appointment is only marked COMPLETED after the clinical Consultation record has been
+ * successfully created. Cloudinary upload failure is non-fatal: if it fails, consultation completion
+ * proceeds without a PDF URL, matching the established product behavior.
  *
  * @param {object} params
  * @param {string} params.appointmentId  - Appointment._id
@@ -221,9 +220,8 @@ export const completeConsultation = async ({
  * 1. Validates diagnosis requirement (Clinical validation).
  * 2. Verifies token exists, belongs to doctor's clinic, and is CALLED without mutating status (Queue verification).
  * 3. Creates canonical Consultation record using createConsultation() in clinical persistence.
- * 4. Temporarily persists clinical fields (diagnosis, prescription, consultationNotes) onto Token via Queue facade.
- * 5. Triggers queue lifecycle transition to COMPLETED & Socket.IO broadcast via Queue facade.
- * 6. Returns completed token record matching existing API contract.
+ * 4. Triggers queue lifecycle transition to COMPLETED & Socket.IO broadcast via Queue facade.
+ * 5. Returns completed token record matching existing API contract.
  *
  * NOTE: Token consultations intentionally do NOT generate a prescription PDF or upload to Cloudinary,
  * preserving current product behavior.

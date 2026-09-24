@@ -1,4 +1,4 @@
-import { getDoctorProfileWithClinicStatus } from '../services/doctor.service.js';
+import { getDoctorProfileWithClinicStatus } from '../modules/identity/index.js';
 
 export const requireApprovedClinic = async (req, res, next) => {
     try {

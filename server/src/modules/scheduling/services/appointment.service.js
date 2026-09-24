@@ -1,13 +1,8 @@
-import * as doctorRepository from '../../../repositories/doctor.repository.js';
+import { findDoctorById } from '../../identity/index.js';
 import * as doctorLeaveRepository from '../repositories/doctorLeave.repository.js';
 import * as doctorAvailabilityRepository from '../repositories/doctorAvailability.repository.js';
 import * as appointmentRepository from '../repositories/appointment.repository.js';
 import { generateSlots } from '../utils/slotGenerator.js';
-import {
-    getConsultationByAppointmentId,
-    getPatientConsultationHistory,
-    getPrescriptionUrlsForAppointments,
-} from '../../clinical/index.js';
 
 export const bookAppointment = async ({
     patientId,
@@ -16,7 +11,7 @@ export const bookAppointment = async ({
     time,
 }) => {
     // 1. Resolve doctor profile using canonical Doctor._id
-    const doctorProfile = await doctorRepository.findById(doctorId);
+    const doctorProfile = await findDoctorById(doctorId);
 
     if (!doctorProfile) {
         throw new Error('Doctor profile not found');
@@ -95,7 +90,7 @@ export const bookAppointment = async ({
  */
 export const getAvailableSlots = async (doctorId, date) => {
     // 1. Resolve doctor profile using canonical Doctor._id
-    const doctorProfile = await doctorRepository.findById(doctorId);
+    const doctorProfile = await findDoctorById(doctorId);
     if (!doctorProfile) {
         throw new Error('Doctor not found');
     }
@@ -206,8 +201,11 @@ export const getPatientDashboardData = async (patientId, todayString) => {
 };
 
 /**
- * Retrieves all appointments for a given patient with doctor and clinic details,
- * decorated with prescription URLs from the Clinical domain.
+ * Retrieves all appointments for a given patient with doctor and clinic details.
+ *
+ * NOTE: Prescription URLs are Clinical data and are intentionally NOT fetched here.
+ * Scheduling must not depend on Clinical. The controller fetches URLs via the Clinical
+ * facade and composes the full response.
  *
  * @param {string} patientId - User._id of the patient
  * @returns {Promise<Array>}
@@ -217,18 +215,7 @@ export const getPatientAppointments = async (patientId) => {
     if (!appointments || appointments.length === 0) {
         return [];
     }
-
-    const appointmentIds = appointments.map((appt) => appt._id);
-    const prescriptionUrls = await getPrescriptionUrlsForAppointments(appointmentIds);
-
-    return appointments.map((appt) => {
-        const apptObj = appt.toObject ? appt.toObject() : { ...appt };
-        const clinicalUrl = prescriptionUrls[appt._id.toString()];
-        return {
-            ...apptObj,
-            prescriptionUrl: clinicalUrl || apptObj.prescriptionUrl || '',
-        };
-    });
+    return appointments;
 };
 
 /**
@@ -357,13 +344,17 @@ export const completeAppointment = async (appointmentIdOrParams, doctorProfileId
 };
 
 /**
- * Retrieves appointment details with patient, clinic, doctor, and patient's past consultations with this doctor.
- * Scheduling owns appointment metadata/lifecycle; Clinical owns clinical consultation details.
+ * Returns a fully populated appointment document for the doctor consultation view.
+ * Verifies the appointment belongs to the doctor.
+ *
+ * NOTE: Clinical data (consultation record + history) is intentionally NOT fetched here.
+ * Scheduling must not depend on Clinical. The controller fetches clinical data via the Clinical
+ * facade and composes the full response.
  *
  * @param {object} params
  * @param {string} params.appointmentId  - Appointment._id
  * @param {string} params.doctorProfileId - Canonical Doctor._id
- * @returns {Promise<object>} { appointment, pastAppointments }
+ * @returns {Promise<object>} Populated appointment document
  */
 export const getAppointmentDetails = async ({ appointmentId, doctorProfileId }) => {
     const appointment = await appointmentRepository.findDetailsById(appointmentId);
@@ -380,53 +371,7 @@ export const getAppointmentDetails = async ({ appointmentId, doctorProfileId }) 
         throw error;
     }
 
-    // Fetch clinical data via Clinical facade
-    const [consultation, consultationHistory] = await Promise.all([
-        getConsultationByAppointmentId(appointmentId),
-        getPatientConsultationHistory({
-            patientId: appointment.patient._id,
-            doctorProfileId,
-            limit: 10,
-        }),
-    ]);
-
-    // Compose appointment object with canonical clinical fields
-    const appointmentObj = appointment.toObject ? appointment.toObject() : { ...appointment };
-    if (consultation) {
-        appointmentObj.diagnosis = consultation.diagnosis || appointmentObj.diagnosis || '';
-        appointmentObj.prescription = consultation.prescription || appointmentObj.prescription || '';
-        appointmentObj.consultationNotes = consultation.consultationNotes || appointmentObj.consultationNotes || '';
-        appointmentObj.prescriptionUrl = consultation.prescriptionUrl || appointmentObj.prescriptionUrl || '';
-    }
-
-    // Compose pastAppointments from clinical consultation history (excluding current encounter)
-    const pastAppointments = (consultationHistory || [])
-        .filter((c) => {
-            const isCurrentAppointment = c.appointment && (
-                (c.appointment._id && c.appointment._id.toString() === appointmentId.toString()) ||
-                c.appointment.toString() === appointmentId.toString()
-            );
-            const isCurrentConsultation = consultation && c._id.toString() === consultation._id.toString();
-            return !isCurrentAppointment && !isCurrentConsultation;
-        })
-        .map((c) => ({
-            _id: c._id,
-            date: c.consultationDate || (c.appointment && c.appointment.date) || (c.completedAt ? new Date(c.completedAt).toISOString().split('T')[0] : ''),
-            time: (c.appointment && c.appointment.time) || (c.completedAt ? new Date(c.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''),
-            status: 'COMPLETED',
-            diagnosis: c.diagnosis || '',
-            prescription: c.prescription || '',
-            consultationNotes: c.consultationNotes || '',
-            prescriptionUrl: c.prescriptionUrl || '',
-            clinic: c.clinic || null,
-            doctor: c.doctor || null,
-            originType: c.originType,
-        }));
-
-    return {
-        appointment: appointmentObj,
-        pastAppointments,
-    };
+    return appointment;
 };
 
 /**

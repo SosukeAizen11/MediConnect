@@ -1,12 +1,12 @@
-import Doctor from '../models/doctor.model.js';
+import Doctor from '../modules/identity/models/doctor.model.js';
 import Clinic from '../models/clinic.model.js';
-import Token from '../modules/queue/models/token.model.js';
 import DoctorPost from '../models/post.model.js';
 
 import { getDoctorAppointmentStats } from '../modules/scheduling/index.js';
 import { getDoctorConsultedPatients } from '../modules/clinical/index.js';
+import { countWaitingTokensByClinic } from '../modules/queue/index.js';
 
-import { getOrCreateDoctorProfile } from '../services/doctor.service.js';
+import { getOrCreateDoctorProfile } from '../modules/identity/index.js';
 
 export const createDoctorProfile = async (req, res, next) => {
     try {
@@ -188,18 +188,17 @@ export const getDashboardStats = async (req, res, next) => {
             pendingCount: pendingAppointments,
         } = await getDoctorAppointmentStats(doctorId, dateString);
 
-        // 4. Active Tokens
+        // 4. Active Tokens — via Queue facade
         let activeTokens = 0;
 
         if (doctorDoc.clinic) {
             const todayDate = new Date();
             todayDate.setHours(0, 0, 0, 0);
 
-            activeTokens = await Token.countDocuments({
-                clinic: doctorDoc.clinic,
-                date: todayDate,
-                status: 'WAITING',
-            });
+            activeTokens = await countWaitingTokensByClinic(
+                doctorDoc.clinic,
+                todayDate
+            );
         }
 
         res.status(200).json({

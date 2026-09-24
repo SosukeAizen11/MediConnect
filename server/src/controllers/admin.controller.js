@@ -1,9 +1,9 @@
 import Clinic from '../models/clinic.model.js';
-import Doctor from '../models/doctor.model.js';
-import User from '../models/user.model.js';
-import Token from '../modules/queue/models/token.model.js';
+import Doctor from '../modules/identity/models/doctor.model.js';
+import User from '../modules/identity/models/user.model.js';
 import Post from '../models/post.model.js';
 import { getAppointmentStatsForAdmin } from '../modules/scheduling/index.js';
+import { getTokenStatsForAdmin } from '../modules/queue/index.js';
 import { approveClinic as approveClinicService } from '../services/clinic.service.js';
 
 // Get pending clinics (not approved)
@@ -238,10 +238,8 @@ export const getSystemAnalytics = async (req, res) => {
             // Appointment Data
             appointmentStats,
 
-            // Token Data
-            totalTokens,
-            activeTokens,
-            completedTokens,
+            // Token Data (via Queue facade)
+            tokenStats,
 
             // Posts Data
             totalPosts,
@@ -263,16 +261,15 @@ export const getSystemAnalytics = async (req, res) => {
             // Appointments (via Scheduling facade)
             getAppointmentStatsForAdmin(),
 
-            // Tokens
-            Token.countDocuments(),
-            Token.countDocuments({ status: { $in: ['WAITING', 'SERVING', 'CALLED'] } }),
-            Token.countDocuments({ status: 'COMPLETED' }),
+            // Tokens (via Queue facade)
+            getTokenStatsForAdmin(),
 
             // Posts
             Post.countDocuments(),
         ]);
 
         const { totalAppointments, completedAppointments, pendingAppointments } = appointmentStats;
+        const { totalTokens, activeTokens, completedTokens } = tokenStats;
 
         res.json({
             success: true,

@@ -204,3 +204,42 @@ export const findByIdWithDetails = async (tokenId) => {
         )
         .populate('clinic', 'name address');
 };
+
+// ─── Analytics / dashboard counts ─────────────────────────────────────────────
+
+/**
+ * Returns total count of all tokens across the system.
+ * Used by admin platform analytics.
+ */
+export const countAll = async () => {
+    return Token.countDocuments();
+};
+
+/**
+ * Returns count of tokens matching any of the given status values.
+ * Used by admin platform analytics (active / completed aggregates).
+ *
+ * @param {Array<string>} statuses
+ * @returns {Promise<number>}
+ */
+export const countByStatuses = async (statuses) => {
+    return Token.countDocuments({
+        status: { $in: statuses },
+    });
+};
+
+/**
+ * Counts WAITING tokens for a clinic on a given date.
+ * Used by the doctor dashboard active-tokens KPI.
+ *
+ * @param {string|object} clinicId
+ * @param {Date} date
+ * @returns {Promise<number>}
+ */
+export const countWaitingByClinicAndDate = async (clinicId, date) => {
+    return Token.countDocuments({
+        clinic: clinicId,
+        date,
+        status: 'WAITING',
+    });
+};

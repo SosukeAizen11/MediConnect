@@ -1,4 +1,4 @@
-import Clinic from '../../../models/clinic.model.js';
+import { getClinicById } from '../../../services/clinic.service.js';
 
 import {
     joinQueue as joinQueueService,
@@ -15,7 +15,7 @@ import {
     getPatientConsultationHistory,
 } from '../../clinical/index.js';
 
-import { getOrCreateDoctorProfile } from '../../../services/doctor.service.js';
+import { getOrCreateDoctorProfile } from '../../identity/index.js';
 
 
 // ─── Patient: Join token queue ────────────────────────────────────────────────
@@ -30,7 +30,7 @@ export const joinTokenQueue = async (req, res) => {
         }
 
         // Clinic validation: existence and type are request-level concerns
-        const clinic = await Clinic.findById(clinicId);
+        const clinic = await getClinicById(clinicId);
         if (!clinic) {
             return res.status(404).json({ message: 'Clinic not found' });
         }
@@ -102,7 +102,7 @@ export const getDoctorTokenQueue = async (req, res) => {
         }
 
         // Clinic validation: type check is a request-level guard
-        const clinic = await Clinic.findById(doctorDoc.clinic);
+        const clinic = await getClinicById(doctorDoc.clinic);
         if (!clinic) {
             return res.status(404).json({ message: 'Clinic not found' });
         }
@@ -135,7 +135,7 @@ export const advanceToken = async (req, res) => {
             });
         }
 
-        const clinic = await Clinic.findById(doctorDoc.clinic);
+        const clinic = await getClinicById(doctorDoc.clinic);
 
         const { message, data } = await advanceTokenService(
             doctorDoc.clinic,

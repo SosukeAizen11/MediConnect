@@ -1,6 +1,6 @@
 import { analyzeReceptionistIntent } from "../utils/groqClient.js";
 import { generateVoice } from "../utils/elevenlabsClient.js";
-import Doctor from "../models/doctor.model.js";
+import Doctor from "../modules/identity/models/doctor.model.js";
 import { bookAppointment } from "../modules/scheduling/index.js";
 
 // Helper: attach TTS audio to any response

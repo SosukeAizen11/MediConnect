@@ -1,4 +1,4 @@
-import User from '../models/user.model.js';
+import User from '../modules/identity/models/user.model.js';
 import Report from '../models/report.model.js';
 import { getPatientDashboardData } from '../modules/scheduling/index.js';
 

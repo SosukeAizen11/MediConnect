@@ -1,5 +1,13 @@
 import * as doctorRepository from '../repositories/doctor.repository.js';
 
+export const findDoctorById = async (doctorId) => {
+    return doctorRepository.findById(doctorId);
+};
+
+export const findDoctorByUserId = async (userId) => {
+    return doctorRepository.findByUserId(userId);
+};
+
 export const getOrCreateDoctorProfile = async (userId) => {
     let doctor = await doctorRepository.findByUserId(userId);
 

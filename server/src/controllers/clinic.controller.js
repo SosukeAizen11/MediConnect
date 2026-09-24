@@ -3,7 +3,7 @@ import { approveClinic as approveClinicService } from '../services/clinic.servic
 import {
     getOrCreateDoctorProfile,
     linkClinicToDoctor,
-} from '../services/doctor.service.js';
+} from '../modules/identity/index.js';
 
 export const registerClinic = async (req, res, next) => {
     try {

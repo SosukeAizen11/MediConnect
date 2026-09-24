@@ -10,8 +10,8 @@ dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 import { config } from '../config/env.js';
-import User from '../models/user.model.js';
-import Doctor from '../models/doctor.model.js';
+import User from '../modules/identity/models/user.model.js';
+import Doctor from '../modules/identity/models/doctor.model.js';
 import DoctorAvailability from '../modules/scheduling/models/doctorAvailability.model.js';
 import DoctorLeave from '../modules/scheduling/models/doctorLeave.model.js';
 import Appointment from '../modules/scheduling/models/appointment.model.js';

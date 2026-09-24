@@ -21,4 +21,8 @@ export {
     // Clinical integration (called by Clinical module to complete a token encounter)
     getTokenForConsultation,
     completeToken,
+
+    // Analytics / dashboard (Admin, Doctor)
+    getTokenStatsForAdmin,
+    countWaitingTokensByClinic,
 } from './services/token.service.js';
