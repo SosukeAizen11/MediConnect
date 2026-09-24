@@ -1,5 +1,4 @@
 import Doctor from '../modules/identity/models/doctor.model.js';
-import Clinic from '../models/clinic.model.js';
 import DoctorPost from '../models/post.model.js';
 
 import { getDoctorAppointmentStats } from '../modules/scheduling/index.js';
@@ -7,6 +6,7 @@ import { getDoctorConsultedPatients } from '../modules/clinical/index.js';
 import { countWaitingTokensByClinic } from '../modules/queue/index.js';
 
 import { getOrCreateDoctorProfile } from '../modules/identity/index.js';
+import { getClinicById } from '../modules/clinic/index.js';
 
 export const createDoctorProfile = async (req, res, next) => {
     try {
@@ -25,7 +25,7 @@ export const createDoctorProfile = async (req, res, next) => {
         }
 
         // Check if clinic exists and is approved
-        const clinicDoc = await Clinic.findById(clinic);
+        const clinicDoc = await getClinicById(clinic);
         if (!clinicDoc) {
             res.status(404);
             return next(new Error('Clinic not found'));
@@ -89,7 +89,7 @@ export const updateDoctorProfile = async (req, res, next) => {
 
         // Validate clinic if provided
         if (clinic) {
-            const clinicDoc = await Clinic.findById(clinic);
+            const clinicDoc = await getClinicById(clinic);
 
             if (!clinicDoc) {
                 res.status(404);

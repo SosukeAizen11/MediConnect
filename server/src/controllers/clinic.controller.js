@@ -1,5 +1,9 @@
-import Clinic from '../models/clinic.model.js';
-import { approveClinic as approveClinicService } from '../services/clinic.service.js';
+import {
+    getClinicById as getClinicByIdService,
+    approveClinic as approveClinicService,
+    createClinic,
+    findApprovedActiveClinics,
+} from '../modules/clinic/index.js';
 import {
     getOrCreateDoctorProfile,
     linkClinicToDoctor,
@@ -21,13 +25,11 @@ export const registerClinic = async (req, res, next) => {
             return next(new Error('You already have a registered clinic'));
         }
 
-        const clinic = await Clinic.create({
+        const clinic = await createClinic({
             name,
             address,
             clinicType,
             workingHours,
-            isApproved: false,
-            isActive: true,
             createdBy: doctorProfile._id,
         });
 
@@ -45,7 +47,7 @@ export const registerClinic = async (req, res, next) => {
 
 export const getApprovedClinics = async (req, res, next) => {
     try {
-        const clinics = await Clinic.find({ isApproved: true, isActive: true });
+        const clinics = await findApprovedActiveClinics();
 
         res.status(200).json({
             success: true,
@@ -59,7 +61,7 @@ export const getApprovedClinics = async (req, res, next) => {
 
 export const getClinicById = async (req, res, next) => {
     try {
-        const clinic = await Clinic.findById(req.params.id);
+        const clinic = await getClinicByIdService(req.params.id);
 
         if (!clinic) {
             res.status(404);

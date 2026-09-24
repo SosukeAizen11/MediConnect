@@ -1,4 +1,4 @@
-import { getClinicById } from '../../../services/clinic.service.js';
+import { getClinicById } from '../../clinic/index.js';
 
 import {
     joinQueue as joinQueueService,
