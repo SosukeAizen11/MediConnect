@@ -21,3 +21,35 @@ export const getOrCreateDoctorProfile = async (userId) => {
         throw error;
     }
 };
+
+export const linkClinicToDoctor = async (doctorId, clinicId) => {
+    const doctor = await doctorRepository.findById(doctorId);
+
+    if (!doctor) {
+        const error = new Error('Doctor profile not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    if (doctor.clinic) {
+        const error = new Error('You already have a registered clinic');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    return doctorRepository.linkClinic(doctorId, clinicId);
+};
+
+export const getDoctorProfileWithClinicStatus = async (userId) => {
+    const doctor = await doctorRepository.findByUserId(userId);
+
+    if (!doctor) {
+        const error = new Error('Doctor profile not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    await doctor.populate('clinic', 'isApproved');
+
+    return doctor;
+};

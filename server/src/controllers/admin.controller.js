@@ -4,6 +4,7 @@ import User from '../models/user.model.js';
 import Token from '../modules/queue/models/token.model.js';
 import Post from '../models/post.model.js';
 import { getAppointmentStatsForAdmin } from '../modules/scheduling/index.js';
+import { approveClinic as approveClinicService } from '../services/clinic.service.js';
 
 // Get pending clinics (not approved)
 export const getPendingClinics = async (req, res) => {
@@ -42,15 +43,9 @@ export const getPendingClinics = async (req, res) => {
 };
 
 // Approve a clinic
-export const approveClinic = async (req, res) => {
+export const approveClinic = async (req, res, next) => {
     try {
-        const clinic = await Clinic.findById(req.params.id);
-        if (!clinic) {
-            return res.status(404).json({ message: 'Clinic not found' });
-        }
-
-        clinic.isApproved = true;
-        await clinic.save();
+        const clinic = await approveClinicService(req.params.id);
 
         res.json({
             success: true,
@@ -58,8 +53,11 @@ export const approveClinic = async (req, res) => {
             data: clinic,
         });
     } catch (error) {
-        console.error('Approve clinic error:', error);
-        res.status(500).json({ message: 'Server error' });
+        if (error.statusCode) {
+            res.status(error.statusCode);
+        }
+
+        next(error);
     }
 };
 

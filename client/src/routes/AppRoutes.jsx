@@ -41,6 +41,7 @@ import ClinicApprovals from '../pages/admin/ClinicApprovals';
 import AllClinics from '../pages/admin/AllClinics';
 import Users from '../pages/admin/Users';
 import ReportViewer from '../pages/common/ReportViewer';
+import ApprovedDoctorRoute from '../components/ApprovedDoctorRoute';
 
 const getRedirectPath = (role) => {
     switch (role) {
@@ -96,20 +97,25 @@ function AppRoutes() {
                 element={<ProtectedRoute allowedRoles={['DOCTOR']} />}
             >
                 <Route element={<DoctorLayout />}>
+                    {/* Available before clinic approval */}
                     <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
                     <Route path="/doctor/register-clinic" element={<RegisterClinic />} />
-                    <Route path="/doctor/queue" element={<AppointmentQueue />} />
-                    <Route path="/doctor/token-queue" element={<TokenQueue />} />
-                    <Route path="/doctor/consult/:appointmentId" element={<Consultation />} />
-                    <Route path="/doctor/token-consult/:tokenId" element={<TokenConsultation />} />
-                    <Route path="/doctor/patients" element={<MyPatients />} />
-                    <Route path="/doctor/create-post" element={<CreatePost />} />
-                    <Route path="/doctor/posts" element={<MyPosts />} />
                     <Route path="/doctor/profile" element={<DoctorProfile />} />
-                    <Route path="/doctor/appointments" element={<DoctorAppointments />} />
-                    <Route path="/doctor/availability" element={<DoctorAvailability />} />
-                    <Route path="/doctor/appointment-consult/:appointmentId" element={<AppointmentConsult />} />
-                    <Route path="/doctor/prescription/:appointmentId" element={<PrescriptionPreview />} />
+
+                    {/* Requires approved clinic */}
+                    <Route element={<ApprovedDoctorRoute />}>
+                        <Route path="/doctor/queue" element={<AppointmentQueue />} />
+                        <Route path="/doctor/token-queue" element={<TokenQueue />} />
+                        <Route path="/doctor/consult/:appointmentId" element={<Consultation />} />
+                        <Route path="/doctor/token-consult/:tokenId" element={<TokenConsultation />} />
+                        <Route path="/doctor/patients" element={<MyPatients />} />
+                        <Route path="/doctor/create-post" element={<CreatePost />} />
+                        <Route path="/doctor/posts" element={<MyPosts />} />
+                        <Route path="/doctor/appointments" element={<DoctorAppointments />} />
+                        <Route path="/doctor/availability" element={<DoctorAvailability />} />
+                        <Route path="/doctor/appointment-consult/:appointmentId" element={<AppointmentConsult />} />
+                        <Route path="/doctor/prescription/:appointmentId" element={<PrescriptionPreview />} />
+                    </Route>
                 </Route>
             </Route>
 

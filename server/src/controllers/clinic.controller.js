@@ -1,6 +1,9 @@
 import Clinic from '../models/clinic.model.js';
-import Doctor from '../models/doctor.model.js';
 import { approveClinic as approveClinicService } from '../services/clinic.service.js';
+import {
+    getOrCreateDoctorProfile,
+    linkClinicToDoctor,
+} from '../services/doctor.service.js';
 
 export const registerClinic = async (req, res, next) => {
     try {
@@ -11,12 +14,7 @@ export const registerClinic = async (req, res, next) => {
             return next(new Error('Please provide all required fields'));
         }
 
-        // Check if doctor already has a clinic
-        const doctorProfile = await Doctor.findOne({ user: req.user._id });
-        if (!doctorProfile) {
-            res.status(404);
-            return next(new Error('Doctor profile not found'));
-        }
+        const doctorProfile = await getOrCreateDoctorProfile(req.user._id);
 
         if (doctorProfile.clinic) {
             res.status(400);
@@ -33,9 +31,7 @@ export const registerClinic = async (req, res, next) => {
             createdBy: doctorProfile._id,
         });
 
-        // Link clinic to DoctorProfile
-        doctorProfile.clinic = clinic._id;
-        await doctorProfile.save();
+        await linkClinicToDoctor(doctorProfile._id, clinic._id);
 
         res.status(201).json({
             success: true,

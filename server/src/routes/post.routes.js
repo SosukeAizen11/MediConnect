@@ -3,23 +3,45 @@ import { getPosts, createPost, getMyPosts, updatePost, deletePost, toggleLike, a
 import { protect } from '../middleware/auth.middleware.js';
 import { authorize } from '../middleware/role.middleware.js';
 import upload from '../middleware/upload.middleware.js';
-
+import { requireApprovedClinic } from '../middleware/approvedClinic.middleware.js';
 const router = express.Router();
 
 // Get all posts (public - any authenticated user)
 router.get('/', protect, getPosts);
 
-// Get doctor's own posts
-router.get('/my', protect, authorize('DOCTOR'), getMyPosts);
+router.get(
+    '/my',
+    protect,
+    authorize('DOCTOR'),
+    requireApprovedClinic,
+    getMyPosts
+);
 
-// Create a post (DOCTOR only)
-router.post('/', protect, authorize('DOCTOR'), upload.single('image'), createPost);
+router.post(
+    '/',
+    protect,
+    authorize('DOCTOR'),
+    requireApprovedClinic,
+    upload.single('image'),
+    createPost
+);
 
-// Update a post (DOCTOR only)
-router.put('/:postId', protect, authorize('DOCTOR'), upload.single('image'), updatePost);
+router.put(
+    '/:postId',
+    protect,
+    authorize('DOCTOR'),
+    requireApprovedClinic,
+    upload.single('image'),
+    updatePost
+);
 
-// Delete a post (DOCTOR only)
-router.delete('/:postId', protect, authorize('DOCTOR'), deletePost);
+router.delete(
+    '/:postId',
+    protect,
+    authorize('DOCTOR'),
+    requireApprovedClinic,
+    deletePost
+);
 
 // Toggle like on a post (Any authenticated user)
 router.put('/:id/like', protect, toggleLike);

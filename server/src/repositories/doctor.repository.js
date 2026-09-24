@@ -11,3 +11,11 @@ export const findByUserId = async (userId) => {
 export const create = async (doctorData) => {
     return Doctor.create(doctorData);
 };
+
+export const linkClinic = async (doctorId, clinicId) => {
+    return Doctor.findByIdAndUpdate(
+        doctorId,
+        { clinic: clinicId },
+        { new: true }
+    );
+};
