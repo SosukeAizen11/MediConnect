@@ -1,10 +1,13 @@
 import jwt from 'jsonwebtoken';
-import User from '../modules/identity/models/user.model.js';
-import { config } from '../config/env.js';
-
+import { config } from '../../../config/env.js';
 import mongoose from 'mongoose';
 
-import { getOrCreateDoctorProfile } from '../modules/identity/index.js';
+import {
+    getOrCreateDoctorProfile,
+    findUserByEmail,
+    createUser,
+} from '../../identity/index.js';
+
 
 const generateToken = (id, role) => {
     return jwt.sign({ id, role }, config.JWT_SECRET, {
@@ -21,14 +24,14 @@ export const register = async (req, res, next) => {
 
         const { name, email, password, role } = req.body;
 
-        const userExists = await User.findOne({ email });
+        const userExists = await findUserByEmail(email);
 
         if (userExists) {
             res.status(400);
             throw new Error('User already exists');
         }
 
-        const user = await User.create({
+        const user = await createUser({
             name,
             email,
             password,
@@ -66,7 +69,7 @@ export const login = async (req, res, next) => {
 
         const { email, password } = req.body;
 
-        const user = await User.findOne({ email });
+        const user = await findUserByEmail(email);
 
         if (user && (await user.matchPassword(password))) {
             if (user.isActive === false) {

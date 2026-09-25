@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
-import User from '../modules/identity/models/user.model.js';
-import { config } from '../config/env.js';
+import { findUserById } from '../../identity/index.js';
+import { config } from '../../../config/env.js';
 
 export const protect = async (req, res, next) => {
     let token;
@@ -14,7 +14,7 @@ export const protect = async (req, res, next) => {
 
             const decoded = jwt.verify(token, config.JWT_SECRET);
 
-            req.user = await User.findById(decoded.id).select('-password');
+            req.user = await findUserById(decoded.id);
 
             if (!req.user) {
                 res.status(401);

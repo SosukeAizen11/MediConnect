@@ -5,7 +5,7 @@ import {
     getClinicById,
     approveClinic,
 } from '../controllers/clinic.controller.js';
-import { protect } from '../middleware/auth.middleware.js';
+import { protect } from '../modules/auth/index.js';
 import { adminOnly } from '../middleware/admin.middleware.js';
 import { authorize } from '../middleware/role.middleware.js';
 

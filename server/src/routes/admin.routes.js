@@ -10,7 +10,7 @@ import {
     deleteUser as deleteUserController,
     getSystemAnalytics,
 } from '../controllers/admin.controller.js';
-import { protect } from '../middleware/auth.middleware.js';
+import { protect } from '../modules/auth/index.js';
 import { adminOnly } from '../middleware/admin.middleware.js';
 
 const router = express.Router();

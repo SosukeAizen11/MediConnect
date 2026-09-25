@@ -17,3 +17,9 @@ export {
     linkClinicToDoctor,
     getDoctorProfileWithClinicStatus,
 } from './services/doctor.service.js';
+
+export {
+    findUserByEmail,
+    findUserById,
+    createUser,
+} from './services/user.service.js';

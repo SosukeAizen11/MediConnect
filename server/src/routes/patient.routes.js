@@ -1,6 +1,6 @@
 import express from 'express';
 import { getProfile, updateProfile, getDashboardStats } from '../controllers/patient.controller.js';
-import { protect } from '../middleware/auth.middleware.js';
+import { protect } from '../modules/auth/index.js';
 import { authorize } from '../middleware/role.middleware.js';
 
 const router = express.Router();
