@@ -13,6 +13,27 @@ export const getClinicById = async (clinicId) => {
 };
 
 /**
+ * Lists clinics for admin composition and reporting.
+ *
+ * @param {object} [filters]
+ * @returns {Promise<Array>}
+ */
+export const findClinicsForAdmin = async (filters = {}) => {
+    const query = { ...filters };
+    return Clinic.find(query).sort({ createdAt: -1 });
+};
+
+/**
+ * Counts clinics matching the provided filters.
+ *
+ * @param {object} [filters]
+ * @returns {Promise<number>}
+ */
+export const countClinics = async (filters = {}) => {
+    return Clinic.countDocuments(filters);
+};
+
+/**
  * Approves a clinic by setting isApproved = true.
  *
  * Throws a structured error with statusCode 404 if the clinic does not exist,
@@ -31,6 +52,46 @@ export const approveClinic = async (clinicId) => {
     }
 
     clinic.isApproved = true;
+    await clinic.save();
+
+    return clinic;
+};
+
+/**
+ * Rejects/removes a clinic.
+ *
+ * @param {string} clinicId - Clinic._id
+ * @returns {Promise<object>} Deleted clinic document
+ */
+export const deleteClinicById = async (clinicId) => {
+    const clinic = await Clinic.findById(clinicId);
+
+    if (!clinic) {
+        const error = new Error('Clinic not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    await Clinic.findByIdAndDelete(clinicId);
+    return clinic;
+};
+
+/**
+ * Toggles a clinic's active state.
+ *
+ * @param {string} clinicId - Clinic._id
+ * @returns {Promise<object>} Updated Clinic document
+ */
+export const toggleClinicActivation = async (clinicId) => {
+    const clinic = await Clinic.findById(clinicId);
+
+    if (!clinic) {
+        const error = new Error('Clinic not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    clinic.isActive = !clinic.isActive;
     await clinic.save();
 
     return clinic;

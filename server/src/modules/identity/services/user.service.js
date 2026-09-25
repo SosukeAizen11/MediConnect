@@ -8,6 +8,14 @@ export const findUserById = async (userId) => {
     return User.findById(userId).select('-password');
 };
 
+export const findUsersForAdmin = async () => {
+    return User.find().select('-password').sort({ createdAt: -1 });
+};
+
+export const countUsers = async (filters = {}) => {
+    return User.countDocuments(filters);
+};
+
 export const createUser = async (userData) => {
     return User.create(userData);
 };
@@ -39,5 +47,33 @@ export const updateUserProfile = async (userId, profileFields = {}) => {
 
     await user.save();
 
+    return user;
+};
+
+export const updateUserActiveStatus = async (userId, isActive) => {
+    const user = await User.findById(userId);
+
+    if (!user) {
+        const error = new Error('User not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    user.isActive = isActive;
+    await user.save();
+
+    return user;
+};
+
+export const deleteUserById = async (userId) => {
+    const user = await User.findById(userId);
+
+    if (!user) {
+        const error = new Error('User not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    await User.findByIdAndDelete(userId);
     return user;
 };

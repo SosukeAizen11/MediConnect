@@ -5,7 +5,6 @@
  *
  * IMPORTANT: Do not import identity internals (models, repository) from outside this
  * module for Doctor operations. Doctor access must go through this facade.
- * User model remains importable until a dedicated User facade exists.
  */
 
 import './models/user.model.js';
@@ -24,6 +23,10 @@ export {
 export {
     findUserByEmail,
     findUserById,
+    findUsersForAdmin,
+    countUsers,
     createUser,
     updateUserProfile,
+    updateUserActiveStatus,
+    deleteUserById,
 } from './services/user.service.js';

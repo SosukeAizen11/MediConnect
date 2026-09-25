@@ -11,7 +11,11 @@ import './models/clinic.model.js';
 
 export {
     getClinicById,
+    findClinicsForAdmin,
+    countClinics,
     approveClinic,
+    deleteClinicById,
+    toggleClinicActivation,
     createClinic,
     findApprovedActiveClinics,
 } from './services/clinic.service.js';

@@ -1,34 +1,52 @@
-import Clinic from '../modules/clinic/models/clinic.model.js';
-import Doctor from '../modules/identity/models/doctor.model.js';
-import User from '../modules/identity/models/user.model.js';
+import {
+    approveClinic as approveClinicService,
+    findClinicsForAdmin,
+    countClinics,
+    deleteClinicById,
+    toggleClinicActivation,
+} from '../modules/clinic/index.js';
+import {
+    findUserById,
+    findUsersForAdmin,
+    countUsers,
+    findDoctorsByClinic,
+    updateUserActiveStatus,
+    deleteUserById,
+} from '../modules/identity/index.js';
 import { getTotalPostCount } from '../modules/posts/index.js';
 import { getAppointmentStatsForAdmin } from '../modules/scheduling/index.js';
 import { getTokenStatsForAdmin } from '../modules/queue/index.js';
-import { approveClinic as approveClinicService } from '../modules/clinic/index.js';
+
+const getClinicDoctorSummary = async (clinicId) => {
+    const doctors = await findDoctorsByClinic(clinicId);
+    const doctor = doctors?.[0];
+
+    if (!doctor?.user) {
+        return null;
+    }
+
+    const user = await findUserById(doctor.user);
+    if (!user) {
+        return null;
+    }
+
+    return { name: user.name, email: user.email };
+};
 
 // Get pending clinics (not approved)
 export const getPendingClinics = async (req, res) => {
     try {
-        const clinics = await Clinic.find({ isApproved: false }).sort({ createdAt: -1 });
+        const clinics = await findClinicsForAdmin({ isApproved: false });
 
-        // Get linked doctors for each clinic
         const clinicData = await Promise.all(
-            clinics.map(async (clinic) => {
-                const doctor = await Doctor.findOne({ clinic: clinic._id }).populate(
-                    'user',
-                    'name email'
-                );
-                return {
-                    _id: clinic._id,
-                    name: clinic.name,
-                    address: clinic.address,
-                    clinicType: clinic.clinicType,
-                    createdAt: clinic.createdAt,
-                    doctor: doctor?.user
-                        ? { name: doctor.user.name, email: doctor.user.email }
-                        : null,
-                };
-            })
+            clinics.map(async (clinic) => ({
+                _id: clinic._id,
+                name: clinic.name,
+                address: clinic.address,
+                clinicType: clinic.clinicType,
+                createdAt: clinic.createdAt,
+                doctor: await getClinicDoctorSummary(clinic._id),
+            }))
         );
 
         res.json({
@@ -64,18 +82,17 @@ export const approveClinic = async (req, res, next) => {
 // Reject or Delete a clinic
 export const deleteClinic = async (req, res) => {
     try {
-        const clinic = await Clinic.findById(req.params.id);
-        if (!clinic) {
-            return res.status(404).json({ message: 'Clinic not found' });
-        }
-
-        await Clinic.findByIdAndDelete(req.params.id);
+        const clinic = await deleteClinicById(req.params.id);
 
         res.json({
             success: true,
             message: `Clinic "${clinic.name}" rejected and removed`,
         });
     } catch (error) {
+        if (error.statusCode === 404) {
+            return res.status(404).json({ message: 'Clinic not found' });
+        }
+
         console.error('Delete clinic error:', error);
         res.status(500).json({ message: 'Server error' });
     }
@@ -84,27 +101,19 @@ export const deleteClinic = async (req, res) => {
 // Get all clinics
 export const getAllClinics = async (req, res) => {
     try {
-        const clinics = await Clinic.find().sort({ createdAt: -1 });
+        const clinics = await findClinicsForAdmin();
 
         const clinicData = await Promise.all(
-            clinics.map(async (clinic) => {
-                const doctor = await Doctor.findOne({ clinic: clinic._id }).populate(
-                    'user',
-                    'name email'
-                );
-                return {
-                    _id: clinic._id,
-                    name: clinic.name,
-                    address: clinic.address,
-                    clinicType: clinic.clinicType,
-                    isApproved: clinic.isApproved,
-                    isActive: clinic.isActive,
-                    createdAt: clinic.createdAt,
-                    doctor: doctor?.user
-                        ? { name: doctor.user.name, email: doctor.user.email }
-                        : null,
-                };
-            })
+            clinics.map(async (clinic) => ({
+                _id: clinic._id,
+                name: clinic.name,
+                address: clinic.address,
+                clinicType: clinic.clinicType,
+                isApproved: clinic.isApproved,
+                isActive: clinic.isActive,
+                createdAt: clinic.createdAt,
+                doctor: await getClinicDoctorSummary(clinic._id),
+            }))
         );
 
         res.json({
@@ -121,13 +130,7 @@ export const getAllClinics = async (req, res) => {
 // Toggle clinic active status
 export const toggleClinicStatus = async (req, res) => {
     try {
-        const clinic = await Clinic.findById(req.params.id);
-        if (!clinic) {
-            return res.status(404).json({ message: 'Clinic not found' });
-        }
-
-        clinic.isActive = !clinic.isActive;
-        await clinic.save();
+        const clinic = await toggleClinicActivation(req.params.id);
 
         res.json({
             success: true,
@@ -135,6 +138,10 @@ export const toggleClinicStatus = async (req, res) => {
             data: clinic,
         });
     } catch (error) {
+        if (error.statusCode === 404) {
+            return res.status(404).json({ message: 'Clinic not found' });
+        }
+
         console.error('Toggle clinic status error:', error);
         res.status(500).json({ message: 'Server error' });
     }
@@ -145,7 +152,7 @@ export const toggleClinicStatus = async (req, res) => {
 // Get all users
 export const getAllUsers = async (req, res) => {
     try {
-        const users = await User.find().select('-password').sort({ createdAt: -1 });
+        const users = await findUsersForAdmin();
 
         res.json({
             success: true,
@@ -161,31 +168,33 @@ export const getAllUsers = async (req, res) => {
 // Toggle user active status
 export const toggleUserStatus = async (req, res) => {
     try {
-        const user = await User.findById(req.params.id);
+        const user = await findUserById(req.params.id);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Prevent admin from disabling themselves
         if (req.user._id.toString() === user._id.toString()) {
             return res.status(403).json({ message: 'You cannot disable your own account' });
         }
 
-        user.isActive = !user.isActive;
-        await user.save();
+        const updatedUser = await updateUserActiveStatus(req.params.id, !user.isActive);
 
         res.json({
             success: true,
-            message: `User "${user.name}" is now ${user.isActive ? 'active' : 'inactive'}`,
+            message: `User "${updatedUser.name}" is now ${updatedUser.isActive ? 'active' : 'inactive'}`,
             data: {
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                isActive: user.isActive,
+                _id: updatedUser._id,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                role: updatedUser.role,
+                isActive: updatedUser.isActive,
             },
         });
     } catch (error) {
+        if (error.statusCode === 404) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
         console.error('Toggle user status error:', error);
         res.status(500).json({ message: 'Server error' });
     }
@@ -194,23 +203,26 @@ export const toggleUserStatus = async (req, res) => {
 // Delete a user
 export const deleteUser = async (req, res) => {
     try {
-        const user = await User.findById(req.params.id);
+        const user = await findUserById(req.params.id);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Prevent admin from deleting themselves
         if (req.user._id.toString() === user._id.toString()) {
             return res.status(403).json({ message: 'You cannot delete your own account' });
         }
 
-        await User.findByIdAndDelete(req.params.id);
+        const deletedUser = await deleteUserById(req.params.id);
 
         res.json({
             success: true,
-            message: `User "${user.name}" has been deleted`,
+            message: `User "${deletedUser.name}" has been deleted`,
         });
     } catch (error) {
+        if (error.statusCode === 404) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
         console.error('Delete user error:', error);
         res.status(500).json({ message: 'Server error' });
     }
@@ -221,50 +233,32 @@ export const deleteUser = async (req, res) => {
 export const getSystemAnalytics = async (req, res) => {
     try {
         const [
-            // User Data
             totalUsers,
             totalDoctors,
             totalPatients,
             activeUsers,
-
-            // Clinic Data
             totalClinics,
             approvedClinics,
             pendingClinics,
             activeClinics,
             tokenClinics,
             appointmentClinics,
-
-            // Appointment Data
             appointmentStats,
-
-            // Token Data (via Queue facade)
             tokenStats,
-
-            // Posts Data
             totalPosts,
         ] = await Promise.all([
-            // Users
-            User.countDocuments(),
-            User.countDocuments({ role: 'DOCTOR' }),
-            User.countDocuments({ role: 'PATIENT' }),
-            User.countDocuments({ isActive: true }),
-
-            // Clinics
-            Clinic.countDocuments(),
-            Clinic.countDocuments({ isApproved: true }),
-            Clinic.countDocuments({ isApproved: false }),
-            Clinic.countDocuments({ isActive: true }),
-            Clinic.countDocuments({ clinicType: 'TOKEN' }),
-            Clinic.countDocuments({ clinicType: 'APPOINTMENT' }),
-
-            // Appointments (via Scheduling facade)
+            countUsers(),
+            countUsers({ role: 'DOCTOR' }),
+            countUsers({ role: 'PATIENT' }),
+            countUsers({ isActive: true }),
+            countClinics(),
+            countClinics({ isApproved: true }),
+            countClinics({ isApproved: false }),
+            countClinics({ isActive: true }),
+            countClinics({ clinicType: 'TOKEN' }),
+            countClinics({ clinicType: 'APPOINTMENT' }),
             getAppointmentStatsForAdmin(),
-
-            // Tokens (via Queue facade)
             getTokenStatsForAdmin(),
-
-            // Posts
             getTotalPostCount(),
         ]);
 
