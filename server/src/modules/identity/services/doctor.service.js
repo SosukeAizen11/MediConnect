@@ -8,6 +8,10 @@ export const findDoctorByUserId = async (userId) => {
     return doctorRepository.findByUserId(userId);
 };
 
+export const findDoctorsByClinic = async (clinicId) => {
+    return doctorRepository.findByClinic(clinicId);
+};
+
 export const getOrCreateDoctorProfile = async (userId) => {
     let doctor = await doctorRepository.findByUserId(userId);
 
@@ -28,6 +32,43 @@ export const getOrCreateDoctorProfile = async (userId) => {
 
         throw error;
     }
+};
+
+export const createDoctorProfile = async (userId, profileData = {}) => {
+    const existingProfile = await doctorRepository.findByUserId(userId);
+
+    if (existingProfile) {
+        const error = new Error('Doctor profile already exists for this user');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    return doctorRepository.create({
+        user: userId,
+        clinic: profileData.clinic || null,
+        specialization: profileData.specialization || '',
+        experienceYears: profileData.experienceYears ?? 0,
+    });
+};
+
+export const updateDoctorProfile = async (doctorId, profileFields = {}) => {
+    const doctor = await doctorRepository.findById(doctorId);
+
+    if (!doctor) {
+        const error = new Error('Doctor profile not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    const { clinic, specialization, experienceYears } = profileFields;
+
+    if (clinic !== undefined) doctor.clinic = clinic;
+    if (specialization !== undefined) doctor.specialization = specialization;
+    if (experienceYears !== undefined) doctor.experienceYears = experienceYears;
+
+    await doctor.save();
+
+    return doctor;
 };
 
 export const linkClinicToDoctor = async (doctorId, clinicId) => {

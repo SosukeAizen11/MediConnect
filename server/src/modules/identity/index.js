@@ -12,8 +12,11 @@ import './models/user.model.js';
 
 export {
     getOrCreateDoctorProfile,
+    createDoctorProfile,
+    updateDoctorProfile,
     findDoctorById,
     findDoctorByUserId,
+    findDoctorsByClinic,
     linkClinicToDoctor,
     getDoctorProfileWithClinicStatus,
 } from './services/doctor.service.js';
@@ -22,4 +25,5 @@ export {
     findUserByEmail,
     findUserById,
     createUser,
+    updateUserProfile,
 } from './services/user.service.js';

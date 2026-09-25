@@ -1,6 +1,6 @@
 import { analyzeReceptionistIntent } from "../utils/groqClient.js";
 import { generateVoice } from "../utils/elevenlabsClient.js";
-import Doctor from "../modules/identity/models/doctor.model.js";
+import { findDoctorById } from "../modules/identity/index.js";
 import { bookAppointment } from "../modules/scheduling/index.js";
 
 // Helper: attach TTS audio to any response
@@ -72,14 +72,15 @@ export const chatWithReceptionist = async (req, res) => {
             if (lowerMsg.includes("yes") || lowerMsg.includes("confirm") || lowerMsg.includes("book")) {
                 const { parsedDate, selectedTime } = session.pendingBooking;
 
-                // Fetch doctor directly from request doctorId
-                const doctor = await Doctor.findById(doctorId).populate("user", "name");
+                const doctor = await findDoctorById(doctorId);
                 if (!doctor) {
                     return sendWithVoice(res, {
                         message: "Doctor not found.",
                         type: "NO_DOCTOR",
                     });
                 }
+
+                await doctor.populate("user", "name");
 
                 try {
                     const bookingTime = normalizeTimeTo24Hour(selectedTime);
@@ -217,14 +218,15 @@ export const chatWithReceptionist = async (req, res) => {
         }
 
         // ─── 3️⃣ All valid → Fetch Doctor by ID ───
-        const doctor = await Doctor.findById(doctorId).populate("user", "name");
-
+        const doctor = await findDoctorById(doctorId);
         if (!doctor) {
             return sendWithVoice(res, {
                 message: "Doctor not found.",
                 type: "NO_DOCTOR",
             });
         }
+
+        await doctor.populate("user", "name");
 
         // Parse date
         let parsedDate;

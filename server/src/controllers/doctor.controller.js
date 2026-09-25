@@ -1,11 +1,17 @@
-import Doctor from '../modules/identity/models/doctor.model.js';
 import DoctorPost from '../models/post.model.js';
 
 import { getDoctorAppointmentStats } from '../modules/scheduling/index.js';
 import { getDoctorConsultedPatients } from '../modules/clinical/index.js';
 import { countWaitingTokensByClinic } from '../modules/queue/index.js';
 
-import { getOrCreateDoctorProfile } from '../modules/identity/index.js';
+import {
+    getOrCreateDoctorProfile,
+    findDoctorById,
+    findDoctorByUserId,
+    findDoctorsByClinic,
+    createDoctorProfile as createDoctorIdentityProfile,
+    updateDoctorProfile as updateDoctorIdentityProfile,
+} from '../modules/identity/index.js';
 import { getClinicById } from '../modules/clinic/index.js';
 
 export const createDoctorProfile = async (req, res, next) => {
@@ -17,14 +23,12 @@ export const createDoctorProfile = async (req, res, next) => {
             return next(new Error('Please provide clinic and specialization'));
         }
 
-        // Check if user already has a doctor profile
-        const existingProfile = await Doctor.findOne({ user: req.user._id });
+        const existingProfile = await findDoctorByUserId(req.user._id);
         if (existingProfile) {
             res.status(400);
             return next(new Error('Doctor profile already exists for this user'));
         }
 
-        // Check if clinic exists and is approved
         const clinicDoc = await getClinicById(clinic);
         if (!clinicDoc) {
             res.status(404);
@@ -36,8 +40,7 @@ export const createDoctorProfile = async (req, res, next) => {
             return next(new Error('Cannot create profile for unapproved clinic'));
         }
 
-        const doctor = await Doctor.create({
-            user: req.user._id,
+        const doctor = await createDoctorIdentityProfile(req.user._id, {
             clinic,
             specialization,
             experienceYears,
@@ -80,14 +83,13 @@ export const updateDoctorProfile = async (req, res, next) => {
     try {
         const { clinic, specialization, experienceYears } = req.body;
 
-        const doctor = await Doctor.findOne({ user: req.user._id });
+        const doctor = await findDoctorByUserId(req.user._id);
 
         if (!doctor) {
             res.status(404);
             return next(new Error('Doctor profile not found'));
         }
 
-        // Validate clinic if provided
         if (clinic) {
             const clinicDoc = await getClinicById(clinic);
 
@@ -100,27 +102,21 @@ export const updateDoctorProfile = async (req, res, next) => {
                 res.status(400);
                 return next(new Error('Cannot link to unapproved clinic'));
             }
-
-            doctor.clinic = clinic;
         }
 
-        if (specialization !== undefined) {
-            doctor.specialization = specialization;
-        }
+        const updated = await updateDoctorIdentityProfile(doctor._id, {
+            clinic,
+            specialization,
+            experienceYears,
+        });
 
-        if (experienceYears !== undefined) {
-            doctor.experienceYears = experienceYears;
-        }
-
-        await doctor.save();
-
-        const updated = await Doctor.findById(doctor._id)
+        const populated = await findDoctorById(updated._id)
             .populate('user', 'name email phone')
             .populate('clinic', 'name address clinicType');
 
         res.status(200).json({
             success: true,
-            data: updated,
+            data: populated,
         });
     } catch (error) {
         next(error);
@@ -131,14 +127,19 @@ export const getDoctorsByClinic = async (req, res, next) => {
     try {
         const { clinicId } = req.params;
 
-        const doctors = await Doctor.find({ clinic: clinicId })
-            .populate('user', 'name email')
-            .populate('clinic', 'name address');
+        const doctors = await findDoctorsByClinic(clinicId);
+        const populatedDoctors = await Promise.all(
+            doctors.map(async (doctor) => {
+                await doctor.populate('user', 'name email');
+                await doctor.populate('clinic', 'name address');
+                return doctor;
+            })
+        );
 
         res.status(200).json({
             success: true,
-            count: doctors.length,
-            data: doctors,
+            count: populatedDoctors.length,
+            data: populatedDoctors,
         });
     } catch (error) {
         next(error);
@@ -163,7 +164,7 @@ export const getMyPatients = async (req, res, next) => {
 
 export const getDashboardStats = async (req, res, next) => {
     try {
-        const doctorDoc = await Doctor.findOne({ user: req.user._id });
+        const doctorDoc = await findDoctorByUserId(req.user._id);
 
         if (!doctorDoc) {
             return res.status(404).json({

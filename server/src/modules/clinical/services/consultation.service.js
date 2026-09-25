@@ -1,6 +1,6 @@
 import streamifier from 'streamifier';
 import cloudinary from '../../../config/cloudinary.js';
-import User from '../../identity/models/user.model.js';
+import { findUserById } from '../../identity/index.js';
 import { generatePrescriptionPDF } from '../../../utils/generatePrescription.js';
 import {
     getAppointmentForConsultation,
@@ -175,7 +175,7 @@ export const completeConsultation = async ({
     // 2. Generate PDF and upload to Cloudinary (Clinical document concerns)
     let prescriptionUrl = '';
     try {
-        const patientObj = await User.findById(appointment.patient).select('name');
+        const patientObj = await findUserById(appointment.patient);
         const patientName = patientObj?.name || 'Patient';
         const docName = doctorName || 'Doctor';
 
