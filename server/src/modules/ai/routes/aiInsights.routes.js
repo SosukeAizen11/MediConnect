@@ -1,7 +1,7 @@
 import express from 'express';
 import { analyzeReport } from '../controllers/aiInsights.controller.js';
-import { protect } from '../modules/auth/index.js';
-import { authorize } from '../middleware/role.middleware.js';
+import { protect } from '../../auth/index.js';
+import { authorize } from '../../../middleware/role.middleware.js';
 
 const router = express.Router();
 

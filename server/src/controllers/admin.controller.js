@@ -1,7 +1,7 @@
 import Clinic from '../modules/clinic/models/clinic.model.js';
 import Doctor from '../modules/identity/models/doctor.model.js';
 import User from '../modules/identity/models/user.model.js';
-import Post from '../models/post.model.js';
+import { getTotalPostCount } from '../modules/posts/index.js';
 import { getAppointmentStatsForAdmin } from '../modules/scheduling/index.js';
 import { getTokenStatsForAdmin } from '../modules/queue/index.js';
 import { approveClinic as approveClinicService } from '../modules/clinic/index.js';
@@ -265,7 +265,7 @@ export const getSystemAnalytics = async (req, res) => {
             getTokenStatsForAdmin(),
 
             // Posts
-            Post.countDocuments(),
+            getTotalPostCount(),
         ]);
 
         const { totalAppointments, completedAppointments, pendingAppointments } = appointmentStats;

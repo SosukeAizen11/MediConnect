@@ -1,4 +1,4 @@
-import Report from '../../../models/report.model.js';
+import Report from '../models/report.model.js';
 
 export const getPatientReportCount = async (patientId) => {
     if (!patientId) {
@@ -6,4 +6,12 @@ export const getPatientReportCount = async (patientId) => {
     }
 
     return Report.countDocuments({ patient: patientId });
+};
+
+export const getReportForPatient = async (reportId, patientId) => {
+    if (!reportId || !patientId) {
+        return null;
+    }
+
+    return Report.findOne({ _id: reportId, patient: patientId }).lean();
 };

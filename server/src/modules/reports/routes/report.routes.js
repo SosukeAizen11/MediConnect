@@ -5,9 +5,9 @@ import {
     getPatientReports,
     deleteReport,
 } from '../controllers/report.controller.js';
-import reportUpload from '../middleware/reportUpload.middleware.js';
-import { protect } from '../modules/auth/index.js';
-import { authorize } from '../middleware/role.middleware.js';
+import reportUpload from '../../../middleware/reportUpload.middleware.js';
+import { protect } from '../../auth/index.js';
+import { authorize } from '../../../middleware/role.middleware.js';
 
 const router = express.Router();
 
@@ -16,7 +16,7 @@ router.post(
     '/',
     protect,
     authorize('PATIENT'),
-    reportUpload.single('file'), // Multer middleware
+    reportUpload.single('file'),
     uploadReport
 );
 

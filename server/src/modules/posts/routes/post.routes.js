@@ -1,9 +1,19 @@
 import express from 'express';
-import { getPosts, createPost, getMyPosts, updatePost, deletePost, toggleLike, addComment, deleteComment } from '../controllers/post.controller.js';
-import { protect } from '../modules/auth/index.js';
-import { authorize } from '../middleware/role.middleware.js';
-import upload from '../middleware/upload.middleware.js';
-import { requireApprovedClinic } from '../middleware/approvedClinic.middleware.js';
+import {
+    getPosts,
+    createPost,
+    getMyPosts,
+    updatePost,
+    deletePost,
+    toggleLike,
+    addComment,
+    deleteComment,
+} from '../controllers/post.controller.js';
+import { protect } from '../../auth/index.js';
+import { authorize } from '../../../middleware/role.middleware.js';
+import upload from '../../../middleware/upload.middleware.js';
+import { requireApprovedClinic } from '../../../middleware/approvedClinic.middleware.js';
+
 const router = express.Router();
 
 // Get all posts (public - any authenticated user)

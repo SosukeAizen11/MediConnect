@@ -1,6 +1,6 @@
 import express from 'express';
 import { chatWithReceptionist } from '../controllers/aiReceptionist.controller.js';
-import { protect } from '../modules/auth/index.js';
+import { protect } from '../../auth/index.js';
 
 const router = express.Router();
 

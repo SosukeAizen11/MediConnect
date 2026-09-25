@@ -135,7 +135,7 @@ function Feed() {
         return (
             <div className="flex flex-col items-center justify-center h-[70vh] gap-4">
                 <Loader2 className="w-10 h-10 text-gray-400 animate-spin" />
-                <div className="space-y-4 w-full max-w-[600px] mt-8 opacity-50">
+                <div className="space-y-4 w-full max-w-150 mt-8 opacity-50">
                     <div className="h-12 bg-gray-200 rounded-lg animate-pulse" />
                     <div className="h-96 bg-gray-200 rounded-xl animate-pulse" />
                     <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
@@ -146,7 +146,7 @@ function Feed() {
     }
 
     return (
-        <div className="w-full max-w-[600px] mx-auto py-6 sm:py-8 space-y-8">
+        <div className="w-full max-w-150 mx-auto py-6 sm:py-8 space-y-8">
             {posts.length === 0 ? (
                 /* Empty State */
                 <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -178,7 +178,7 @@ function Feed() {
                                 <div className="flex items-center justify-between p-4">
                                     <div className="flex items-center gap-3">
                                         {/* Avatar circle */}
-                                        <div className="w-10 h-10 bg-linear-to-tr from-emerald-500 to-blue-500 rounded-full p-[2px]">
+                                        <div className="w-10 h-10 bg-linear-to-tr from-emerald-500 to-blue-500 rounded-full p-0.5">
                                             <div className="w-full h-full bg-white rounded-full flex items-center justify-center overflow-hidden border border-white">
                                                 <span className="text-sm font-bold text-gray-700">
                                                     {post.author?.name ? post.author.name.charAt(0).toUpperCase() : 'D'}
@@ -203,11 +203,11 @@ function Feed() {
 
                                 {/* Post Image */}
                                 {post.image && (
-                                    <div className="w-full bg-gray-100 max-h-[500px] overflow-hidden flex items-center justify-center">
+                                    <div className="w-full bg-gray-100 max-h-125 overflow-hidden flex items-center justify-center">
                                         <img
                                             src={post.image}
                                             alt={post.title}
-                                            className="w-full max-h-[500px] object-cover"
+                                            className="w-full max-h-125 object-cover"
                                             loading="lazy"
                                         />
                                     </div>
@@ -221,17 +221,17 @@ function Feed() {
                                                 onClick={() => handleLike(post._id)}
                                                 className="transition-colors group focus:outline-none"
                                             >
-                                                <Heart className={`w-[26px] h-[26px] transition-all duration-200 group-hover:scale-110 active:scale-95 ${isLiked ? 'text-red-500 fill-red-500' : 'text-gray-400'}`} />
+                                                <Heart className={`w-6.5 h-6.5 transition-all duration-200 group-hover:scale-110 active:scale-95 ${isLiked ? 'text-red-500 fill-red-500' : 'text-gray-400'}`} />
                                             </button>
                                             <button
                                                 onClick={() => toggleComments(post._id)}
                                                 className="text-gray-800 hover:text-gray-500 transition-colors group focus:outline-none"
                                             >
-                                                <MessageCircle className={`w-[26px] h-[26px] transition-transform duration-200 group-hover:scale-110 active:scale-95 ${openComments === post._id ? 'text-blue-500' : ''}`} />
+                                                <MessageCircle className={`w-6.5 h-6.5 transition-transform duration-200 group-hover:scale-110 active:scale-95 ${openComments === post._id ? 'text-blue-500' : ''}`} />
                                             </button>
                                         </div>
                                         <button className="text-gray-800 hover:text-gray-500 transition-colors group">
-                                            <Bookmark className="w-[26px] h-[26px] group-hover:scale-110 transition-transform" />
+                                            <Bookmark className="w-6.5 h-6.5 group-hover:scale-110 transition-transform" />
                                         </button>
                                     </div>
 

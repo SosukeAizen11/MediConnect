@@ -1,7 +1,7 @@
-import { analyzeReceptionistIntent } from "../utils/groqClient.js";
-import { generateVoice } from "../utils/elevenlabsClient.js";
-import { findDoctorById } from "../modules/identity/index.js";
-import { bookAppointment } from "../modules/scheduling/index.js";
+import { analyzeReceptionistIntent } from "../infrastructure/groqClient.js";
+import { generateVoice } from "../infrastructure/elevenlabsClient.js";
+import { findDoctorById } from "../../identity/index.js";
+import { bookAppointment } from "../../scheduling/index.js";
 
 // Helper: attach TTS audio to any response
 const sendWithVoice = async (res, data) => {
@@ -218,43 +218,41 @@ export const chatWithReceptionist = async (req, res) => {
         }
 
         // ─── 3️⃣ All valid → Fetch Doctor by ID ───
+        if (!doctorId) {
+            return sendWithVoice(res, {
+                message: "I need a doctor selection to continue.",
+                type: "INCOMPLETE_DATA",
+                intent,
+            });
+        }
+
         const doctor = await findDoctorById(doctorId);
         if (!doctor) {
             return sendWithVoice(res, {
-                message: "Doctor not found.",
+                message: "I couldn't find that doctor. Please choose another doctor.",
                 type: "NO_DOCTOR",
             });
         }
 
-        await doctor.populate("user", "name");
-
-        // Parse date
-        let parsedDate;
-        if (session.date.toLowerCase() === "tomorrow") {
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            parsedDate = tomorrow.toISOString().split("T")[0];
-        } else {
-            parsedDate = session.date;
-        }
-
-        const selectedTime = session.time;
-        const doctorName = doctor.user?.name || "the doctor";
-
-        // ─── 4️⃣ Confirm before booking ───
+        session.pendingBooking = {
+            parsedDate: session.date,
+            selectedTime: session.time,
+        };
         session.step = "confirming";
-        session.pendingBooking = { parsedDate, selectedTime };
 
+        await doctor.populate("user", "name");
+        const doctorName = doctor.user?.name || "the doctor";
         return sendWithVoice(res, {
-            message: `I have an appointment with Dr. ${doctorName} on ${parsedDate} at ${selectedTime}. Shall I confirm this booking?`,
-            type: "CONFIRM_BOOKING",
+            success: true,
+            type: "BOOKING_PENDING_CONFIRMATION",
+            message: `I found Dr. ${doctorName} for ${session.date} at ${session.time}. Would you like me to confirm this booking?`,
+            intent,
         });
-    } catch (error) {
-        console.error("❌ CRITICAL ERROR:", error);
-        return res.status(200).json({
+    } catch (err) {
+        console.error("❌ Chat handling failed:", err);
+        return res.status(500).json({
             success: false,
-            message: "Something went wrong, please try again.",
-            type: "SAFE_FALLBACK",
+            message: "Something went wrong while processing your request.",
         });
     }
 };

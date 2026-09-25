@@ -262,3 +262,11 @@ export const deleteComment = async (req, res) => {
         res.status(500).json({ success: false, message: 'Server error' });
     }
 };
+
+export const getPostCountByAuthor = async (authorId) => {
+    return DoctorPost.countDocuments({ author: authorId });
+};
+
+export const getTotalPostCount = async () => {
+    return DoctorPost.countDocuments();
+};

@@ -1,7 +1,17 @@
 /**
  * Reports Module Public Facade
  *
- * Thin public interface exposing report-domain operations required by other modules.
+ * Public API for the current reports domain.
  */
 
-export { getPatientReportCount } from './services/report.service.js';
+export {
+    getPatientReportCount,
+    getReportForPatient,
+} from './services/report.service.js';
+
+export {
+    uploadReport,
+    getMyReports,
+    getPatientReports,
+    deleteReport,
+} from './controllers/report.controller.js';

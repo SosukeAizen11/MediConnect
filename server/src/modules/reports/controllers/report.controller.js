@@ -1,6 +1,8 @@
 import Report from '../models/report.model.js';
-import cloudinary from '../config/cloudinary.js';
-import streamifier from 'streamifier';// POST /api/v1/reports
+import cloudinary from '../../../config/cloudinary.js';
+import streamifier from 'streamifier';
+
+// POST /api/v1/reports
 const uploadToCloudinary = (buffer) => {
     return new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
@@ -104,7 +106,6 @@ export const deleteReport = async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Find the report and ensure it belongs to the logged-in patient
         const report = await Report.findOne({ _id: id, patient: req.user.id });
 
         if (!report) {
@@ -114,16 +115,12 @@ export const deleteReport = async (req, res) => {
             });
         }
 
-        // Delete from Cloudinary
         try {
-            // Because we pass resource_type: 'raw' on upload, we must destroy it as raw
             await cloudinary.uploader.destroy(report.publicId, { resource_type: 'raw' });
         } catch (cloudErr) {
             console.log("Cloudinary destroy error: ", cloudErr);
-            // Proceed to delete DB record anyway to avoid orphaned DB records if Cloudinary fails
         }
 
-        // Delete from MongoDB
         await Report.deleteOne({ _id: id });
 
         res.status(200).json({
@@ -137,4 +134,8 @@ export const deleteReport = async (req, res) => {
             error: error.message,
         });
     }
+};
+
+export const getReportForAnalysis = async (reportId, patientId) => {
+    return Report.findOne({ _id: reportId, patient: patientId }).lean();
 };

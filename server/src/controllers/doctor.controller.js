@@ -1,5 +1,4 @@
-import DoctorPost from '../models/post.model.js';
-
+import { getPostCountByAuthor } from '../modules/posts/index.js';
 import { getDoctorAppointmentStats } from '../modules/scheduling/index.js';
 import { getDoctorConsultedPatients } from '../modules/clinical/index.js';
 import { countWaitingTokensByClinic } from '../modules/queue/index.js';
@@ -176,9 +175,7 @@ export const getDashboardStats = async (req, res, next) => {
         const doctorId = doctorDoc._id;
 
         // 1. Total Posts
-        const totalPosts = await DoctorPost.countDocuments({
-            author: req.user._id,
-        });
+        const totalPosts = await getPostCountByAuthor(req.user._id);
 
         // 2 & 3. Today's and Pending Appointments — via Scheduling facade
         const today = new Date();

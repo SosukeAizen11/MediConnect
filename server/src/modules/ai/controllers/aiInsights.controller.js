@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
 import https from 'https';
 import tesseract from 'tesseract.js';
-import Report from '../models/report.model.js';
 import AIInsight from '../models/AIInsight.model.js';
-import { sendToGroq } from '../utils/groqClient.js';
+import { sendToGroq } from '../infrastructure/groqClient.js';
+import { getReportForPatient } from '../../reports/index.js';
 
 // Helper to securely fetch a file into memory via HTTPS
 const fetchFileToBuffer = (url) => {
@@ -51,7 +51,7 @@ export const analyzeReport = async (req, res, next) => {
             });
         }
 
-        const report = await Report.findById(reportId);
+        const report = await getReportForPatient(reportId, req.user.id);
 
         if (!report) {
             return res.status(404).json({
