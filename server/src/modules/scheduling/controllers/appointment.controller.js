@@ -130,6 +130,7 @@ export const completeConsultation = async (req, res, next) => {
             diagnosis,
             prescription,
             consultationNotes,
+            finalAmountPaise,
         } = req.body;
 
         const doctorDoc = await getOrCreateDoctorProfile(req.user._id);
@@ -142,6 +143,7 @@ export const completeConsultation = async (req, res, next) => {
                 diagnosis,
                 prescription,
                 consultationNotes,
+                finalAmountPaise,
             });
 
         res.status(200).json({

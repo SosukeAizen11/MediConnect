@@ -18,6 +18,7 @@ import aiReceptionistRoutes from "./modules/ai/routes/aiReceptionist.routes.js";
 import consultationRoutes from "./modules/clinical/routes/consultation.routes.js";
 import notFound from './middleware/notFound.js';
 import errorHandler from './middleware/errorHandler.js';
+import invoiceRoutes from './modules/billing/routes/invoice.routes.js';
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use("/api/v1/reports", reportRoutes);
 app.use("/api/v1/ai-insights", aiInsightsRoutes);
 app.use("/api/v1/ai-receptionist", aiReceptionistRoutes);
 app.use("/api/v1/consultations", consultationRoutes);
+app.use('/api/v1/invoices', invoiceRoutes);
 
 // Middleware
 app.use(notFound);

@@ -21,6 +21,7 @@ import {
     History,
     ShieldAlert,
     CalendarCheck,
+    IndianRupee,
 } from 'lucide-react';
 
 function AppointmentConsult() {
@@ -38,6 +39,7 @@ function AppointmentConsult() {
         diagnosis: '',
         prescription: '',
         consultationNotes: '',
+        finalAmount: '',
     });
 
     useEffect(() => {
@@ -86,9 +88,24 @@ function AppointmentConsult() {
             return;
         }
 
+        const finalAmount = Number(formData.finalAmount);
+        if (
+            formData.finalAmount === '' ||
+            !Number.isFinite(finalAmount) ||
+            finalAmount < 0
+        ) {
+            setToast({
+                type: 'error',
+                message: 'Please enter a valid consultation fee',
+            });
+            return;
+        }
         setSaving(true);
         try {
-            await completeConsultation(appointmentId, formData);
+            await completeConsultation(appointmentId, {
+                ...formData,
+                finalAmountPaise: Math.round(finalAmount * 100),
+            });
             setToast({ type: 'success', message: 'Consultation completed successfully' });
             setTimeout(() => navigate(`/doctor/prescription/${appointmentId}`), 1000);
         } catch (err) {
@@ -426,6 +443,34 @@ function AppointmentConsult() {
                                         placeholder="Follow-up instructions, observations..."
                                         className="w-full px-4 py-3 rounded-lg border border-gray-300 text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors resize-none"
                                     />
+                                </div>
+
+                                <div>
+                                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                                        <IndianRupee className="w-4 h-4 text-emerald-500" />
+                                        Final Consultation Fee <span className="text-red-500">*</span>
+                                    </label>
+
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                                            ₹
+                                        </span>
+
+                                        <input
+                                            type="number"
+                                            name="finalAmount"
+                                            value={formData.finalAmount}
+                                            onChange={handleChange}
+                                            min="0"
+                                            step="0.01"
+                                            placeholder="Enter final consultation fee"
+                                            className="w-full pl-9 pr-4 py-3 rounded-lg border border-gray-300 text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                                        />
+                                    </div>
+
+                                    <p className="text-xs text-gray-400 mt-1.5">
+                                        Enter the final amount to be charged for this consultation.
+                                    </p>
                                 </div>
                             </div>
 
