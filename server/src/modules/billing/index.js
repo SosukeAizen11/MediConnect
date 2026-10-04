@@ -8,4 +8,6 @@ export {
     createConsultationInvoice,
     getInvoiceByConsultationId,
     getPatientInvoices,
+    getInvoiceById,
+    recordPaymentSuccess,
 } from './services/invoice.service.js';

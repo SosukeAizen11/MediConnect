@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getPatientAppointments } from '../../api/appointment.api';
 import { getMyInvoices } from '../../api/invoice.api';
+import { initiatePayment, verifyPayment } from '../../api/payment.api';
 import {
     CalendarCheck,
     User,
@@ -100,6 +101,102 @@ function MyAppointments() {
             </div>
         </div>
     );
+
+    const handlePayment = async (invoice) => {
+        if (!invoice?._id) {
+            return;
+        }
+
+        try {
+            const idempotencyKey = crypto.randomUUID();
+
+            const response = await initiatePayment(
+                invoice._id,
+                idempotencyKey
+            );
+
+            const payment = response.payment;
+
+            if (!payment?.providerOrderId) {
+                throw new Error('Payment order was not created');
+            }
+
+            if (!window.Razorpay) {
+                throw new Error('Razorpay Checkout failed to load');
+            }
+
+            const options = {
+                key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+
+                amount: payment.amount,
+
+                currency: payment.currency,
+
+                name: 'MediConnect',
+
+                description: 'Medical Consultation Payment',
+
+                order_id: payment.providerOrderId,
+
+                handler: async function (razorpayResponse) {
+                    try {
+                        console.log(
+                            'Razorpay payment response:',
+                            razorpayResponse
+                        );
+
+                        const verificationResponse = await verifyPayment({
+                            paymentId: payment._id,
+                            razorpayOrderId:
+                                razorpayResponse.razorpay_order_id,
+                            razorpayPaymentId:
+                                razorpayResponse.razorpay_payment_id,
+                            razorpaySignature:
+                                razorpayResponse.razorpay_signature,
+                        });
+
+                        console.log(
+                            'Payment verified:',
+                            verificationResponse.payment
+                        );
+
+                        alert('Payment successful');
+
+                        window.location.reload();
+                    } catch (error) {
+                        console.error(
+                            'Payment verification failed:',
+                            error.response?.data?.message ||
+                                error.message
+                        );
+
+                        alert(
+                            'Payment verification failed. Please contact support.'
+                        );
+                    }
+                },
+
+                modal: {
+                    ondismiss: function () {
+                        console.log('Razorpay Checkout closed');
+                    },
+                },
+
+                theme: {
+                    color: '#2563eb',
+                },
+            };
+
+            const razorpay = new window.Razorpay(options);
+
+            razorpay.open();
+        } catch (err) {
+            console.error(
+                'Failed to initiate payment:',
+                err.response?.data?.message || err.message
+            );
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -266,12 +363,23 @@ function MyAppointments() {
                                                     </div>
 
                                                     {/* Payment will be implemented later */}
-                                                    <button
-                                                        disabled
-                                                        className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-400 text-sm font-medium rounded-lg border border-gray-200 cursor-not-allowed"
-                                                    >
-                                                        Pay Now
-                                                    </button>
+                                                    {invoice.status === 'PAID' || invoice.amountDue <= 0 ? (
+                                                        <div className="text-center">
+                                                            <div className="text-green-600 font-semibold">
+                                                                Payment Completed
+                                                            </div>
+                                                            <div className="text-sm text-gray-500 mt-1">
+                                                                Consultation bill paid successfully
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handlePayment(invoice)}
+                                                            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                                                        >
+                                                            Pay Now
+                                                        </button>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>

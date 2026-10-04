@@ -134,3 +134,58 @@ export const getPatientInvoices = async (patientId) => {
         issuedAt: -1,
     });
 };
+
+export const getInvoiceById = async (invoiceId) => {
+    return Invoice.findById(invoiceId);
+};
+
+export const recordPaymentSuccess = async ({ invoiceId, amount }) => {
+    if (!invoiceId) {
+        throw new Error('Invoice ID is required');
+    }
+
+    if (!Number.isInteger(amount) || amount <= 0) {
+        throw new Error('Payment amount must be a positive integer in paise');
+    }
+
+    const invoice = await Invoice.findById(invoiceId);
+
+    if (!invoice) {
+        const error = new Error('Invoice not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    if (invoice.status === 'CANCELLED') {
+        const error = new Error('Cannot apply payment to a cancelled invoice');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    /*
+     * If this payment has already been applied,
+     * don't subtract the amount again.
+     */
+    if (invoice.amountDue === 0) {
+        return invoice;
+    }
+
+    if (amount > invoice.amountDue) {
+        const error = new Error('Payment amount exceeds invoice amount due');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    invoice.amountDue -= amount;
+
+    if (invoice.amountDue === 0) {
+        invoice.status = 'PAID';
+        invoice.paidAt = new Date();
+    } else {
+        invoice.status = 'PARTIALLY_PAID';
+    }
+
+    await invoice.save();
+
+    return invoice;
+};
