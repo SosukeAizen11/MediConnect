@@ -9,6 +9,16 @@ const paymentSchema = new mongoose.Schema(
             index: true,
         },
 
+        activeInvoice: {
+            type: mongoose.Schema.Types.ObjectId,
+            default: undefined,
+        },
+
+        orderCreationStartedAt: {
+            type: Date,
+            default: undefined,
+        },
+
         patient: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
@@ -92,6 +102,7 @@ paymentSchema.index(
     { unique: true }
 );
 
+paymentSchema.index({ activeInvoice: 1 }, { unique: true, sparse: true });
 paymentSchema.index({ invoice: 1, createdAt: -1 });
 paymentSchema.index({ patient: 1, createdAt: -1 });
 

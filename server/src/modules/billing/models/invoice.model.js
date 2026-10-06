@@ -70,6 +70,12 @@ const invoiceSchema = new mongoose.Schema(
             integer: true,
         },
 
+        appliedPaymentIds: {
+            type: [{ type: mongoose.Schema.Types.ObjectId }],
+            default: [],
+            select: false,
+        },
+
         status: {
             type: String,
             enum: [

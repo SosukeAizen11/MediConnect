@@ -140,12 +140,7 @@ function MyAppointments() {
 
                 handler: async function (razorpayResponse) {
                     try {
-                        console.log(
-                            'Razorpay payment response:',
-                            razorpayResponse
-                        );
-
-                        const verificationResponse = await verifyPayment({
+                        await verifyPayment({
                             paymentId: payment._id,
                             razorpayOrderId:
                                 razorpayResponse.razorpay_order_id,
@@ -154,11 +149,6 @@ function MyAppointments() {
                             razorpaySignature:
                                 razorpayResponse.razorpay_signature,
                         });
-
-                        console.log(
-                            'Payment verified:',
-                            verificationResponse.payment
-                        );
 
                         alert('Payment successful');
 
@@ -174,12 +164,6 @@ function MyAppointments() {
                             'Payment verification failed. Please contact support.'
                         );
                     }
-                },
-
-                modal: {
-                    ondismiss: function () {
-                        console.log('Razorpay Checkout closed');
-                    },
                 },
 
                 theme: {

@@ -10,4 +10,5 @@ export {
     getPatientInvoices,
     getInvoiceById,
     recordPaymentSuccess,
+    getInvoiceStatusesByAppointmentIds,
 } from './services/invoice.service.js';

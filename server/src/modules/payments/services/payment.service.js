@@ -2,6 +2,124 @@ import Payment from '../models/payment.model.js';
 import { getInvoiceById, recordPaymentSuccess } from '../../billing/index.js';
 import { paymentGateway } from '../infrastructure/paymentGateway.js';
 
+const ACTIVE_PAYMENT_STATUSES = ['PENDING', 'PROCESSING'];
+const ORDER_CREATION_LEASE_MS = 120000;
+const ORDER_CREATION_WAIT_ATTEMPTS = 40;
+const ORDER_CREATION_WAIT_MS = 50;
+
+const waitForPaymentOrder = async (paymentId) => {
+    let currentPayment;
+
+    for (let attempt = 0; attempt < ORDER_CREATION_WAIT_ATTEMPTS; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, ORDER_CREATION_WAIT_MS));
+        currentPayment = await Payment.findById(paymentId);
+
+        if (currentPayment?.providerOrderId || currentPayment?.status === 'FAILED') {
+            return currentPayment;
+        }
+    }
+
+    return currentPayment;
+};
+
+const createPaymentOrder = async (payment) => {
+    if (payment.providerOrderId) {
+        return payment;
+    }
+
+    const now = new Date();
+    const staleLeaseBefore = new Date(now.getTime() - ORDER_CREATION_LEASE_MS);
+    const claimedPayment = await Payment.findOneAndUpdate(
+        {
+            _id: payment._id,
+            status: { $in: ACTIVE_PAYMENT_STATUSES },
+            providerOrderId: null,
+            $or: [
+                { orderCreationStartedAt: { $exists: false } },
+                { orderCreationStartedAt: { $lt: staleLeaseBefore } },
+            ],
+        },
+        { $set: { orderCreationStartedAt: now } },
+        { new: true }
+    );
+
+    if (!claimedPayment) {
+        const currentPayment = await waitForPaymentOrder(payment._id);
+        if (currentPayment?.providerOrderId) {
+            return currentPayment;
+        }
+
+        if (currentPayment?.status === 'FAILED') {
+            return currentPayment;
+        }
+
+        const leaseStartedAt = currentPayment?.orderCreationStartedAt;
+        if (
+            ACTIVE_PAYMENT_STATUSES.includes(currentPayment?.status) &&
+            (!leaseStartedAt ||
+                leaseStartedAt.getTime() <= Date.now() - ORDER_CREATION_LEASE_MS)
+        ) {
+            return createPaymentOrder(currentPayment);
+        }
+
+        const error = new Error('Payment order is being initialized; retry shortly');
+        error.statusCode = 409;
+        throw error;
+    }
+
+    try {
+        const order = await paymentGateway.createOrder({
+            paymentId: claimedPayment._id,
+            amount: claimedPayment.amount,
+            currency: claimedPayment.currency,
+        });
+
+        const updatedPayment = await Payment.findOneAndUpdate(
+            {
+                _id: claimedPayment._id,
+                status: { $in: ACTIVE_PAYMENT_STATUSES },
+                orderCreationStartedAt: now,
+            },
+            {
+                $set: { providerOrderId: order.id },
+                $unset: { orderCreationStartedAt: 1 },
+            },
+            { new: true }
+        );
+
+        if (updatedPayment) {
+            return updatedPayment;
+        }
+
+        const currentPayment = await Payment.findById(claimedPayment._id);
+        if (currentPayment?.providerOrderId) {
+            return currentPayment;
+        }
+
+        throw new Error('Payment order could not be saved');
+    } catch (error) {
+        await Payment.findOneAndUpdate(
+            {
+                _id: claimedPayment._id,
+                status: { $in: ACTIVE_PAYMENT_STATUSES },
+                orderCreationStartedAt: now,
+            },
+            {
+                $set: {
+                    status: 'FAILED',
+                    failureReason: error.message || 'Failed to create payment order',
+                },
+                $unset: {
+                    activeInvoice: 1,
+                    orderCreationStartedAt: 1,
+                },
+            }
+        );
+
+        throw error;
+    }
+};
+
 export const createPayment = async ({
     invoiceId,
     patientId,
@@ -30,6 +148,12 @@ export const createPayment = async ({
     });
 
     if (existingPayment) {
+        if (
+            ACTIVE_PAYMENT_STATUSES.includes(existingPayment.status) &&
+            !existingPayment.providerOrderId
+        ) {
+            return createPaymentOrder(existingPayment);
+        }
         return existingPayment;
     }
 
@@ -83,30 +207,7 @@ export const createPayment = async ({
     });
 
     if (activePayment) {
-        // An older PENDING payment may have been created before
-        // Razorpay integration was added.
-        if (!activePayment.providerOrderId) {
-            try {
-                const order = await paymentGateway.createOrder({
-                    paymentId: activePayment._id,
-                    amount: activePayment.amount,
-                    currency: activePayment.currency,
-                });
-
-                activePayment.providerOrderId = order.id;
-                await activePayment.save();
-            } catch (error) {
-                activePayment.status = 'FAILED';
-                activePayment.failureReason =
-                    error.message || 'Failed to create payment order';
-
-                await activePayment.save();
-
-                throw error;
-            }
-        }
-
-        return activePayment;
+        return createPaymentOrder(activePayment);
     }
 
     // ---------------------------------------------------------
@@ -123,48 +224,40 @@ export const createPayment = async ({
             provider: 'RAZORPAY',
             status: 'PENDING',
             idempotencyKey,
+            activeInvoice: invoice._id,
         });
     } catch (error) {
-        // Another identical request may have won the race.
+        // The active-invoice or idempotency index may have won the race.
         if (error.code === 11000) {
-            return Payment.findOne({
+            const sameKeyPayment = await Payment.findOne({
                 patient: patientId,
                 idempotencyKey,
             });
+
+            if (sameKeyPayment) {
+                if (
+                    ACTIVE_PAYMENT_STATUSES.includes(sameKeyPayment.status) &&
+                    !sameKeyPayment.providerOrderId
+                ) {
+                    return createPaymentOrder(sameKeyPayment);
+                }
+                return sameKeyPayment;
+            }
+
+            const racedActivePayment = await Payment.findOne({
+                invoice: invoice._id,
+                status: { $in: ACTIVE_PAYMENT_STATUSES },
+            });
+
+            if (racedActivePayment) {
+                return createPaymentOrder(racedActivePayment);
+            }
         }
 
         throw error;
     }
 
-    // ---------------------------------------------------------
-    // 7. Create Razorpay order
-    // ---------------------------------------------------------
-    try {
-        const order = await paymentGateway.createOrder({
-            paymentId: payment._id,
-            amount: payment.amount,
-            currency: payment.currency,
-        });
-
-        // -----------------------------------------------------
-        // 8. Store Razorpay's order ID
-        // -----------------------------------------------------
-        payment.providerOrderId = order.id;
-
-        await payment.save();
-
-        return payment;
-    } catch (error) {
-        // Razorpay order creation failed.
-        // Preserve the payment attempt for auditing/retry.
-        payment.status = 'FAILED';
-        payment.failureReason =
-            error.message || 'Failed to create Razorpay order';
-
-        await payment.save();
-
-        throw error;
-    }
+    return createPaymentOrder(payment);
 };
 
 export const getPaymentsByInvoiceId = async (invoiceId) => {
@@ -248,14 +341,56 @@ export const verifyPayment = async ({
     });
 
     if (!isValid) {
-        payment.status = 'FAILED';
-        payment.failureReason = 'Invalid Razorpay payment signature';
+        const failedPayment = await Payment.findOneAndUpdate(
+            { _id: payment._id, status: 'PENDING' },
+            {
+                $set: {
+                    status: 'FAILED',
+                    failureReason: 'Invalid Razorpay payment signature',
+                },
+                $unset: { activeInvoice: 1 },
+            },
+            { new: true }
+        );
 
-        await payment.save();
+        if (!failedPayment) {
+            const currentPayment = await Payment.findById(payment._id);
+            if (currentPayment?.status === 'SUCCEEDED') {
+                return currentPayment;
+            }
+        }
 
         const error = new Error('Payment verification failed');
         error.statusCode = 400;
         throw error;
+    }
+
+    if (payment.status === 'PENDING') {
+        const claimedPayment = await Payment.findOneAndUpdate(
+            {
+                _id: payment._id,
+                patient: patientId,
+                status: 'PENDING',
+                providerOrderId: razorpayOrderId,
+            },
+            { $set: { status: 'PROCESSING' } },
+            { new: true }
+        );
+
+        if (claimedPayment) {
+            payment.status = claimedPayment.status;
+        } else {
+            const currentPayment = await Payment.findById(payment._id);
+            if (currentPayment?.status === 'SUCCEEDED') {
+                return currentPayment;
+            }
+            if (currentPayment?.status !== 'PROCESSING') {
+                const error = new Error('Payment is no longer available for verification');
+                error.statusCode = 409;
+                throw error;
+            }
+            payment.status = currentPayment.status;
+        }
     }
 
     /*
@@ -280,19 +415,38 @@ export const verifyPayment = async ({
      */
     await recordPaymentSuccess({
         invoiceId: payment.invoice,
+        paymentId: payment._id,
         amount: payment.amount,
     });
 
-    /*
-     * Only after Billing accepts the payment do we mark
-     * our Payment record as successful.
-     */
-    payment.status = 'SUCCEEDED';
-    payment.providerPaymentId = razorpayPaymentId;
-    payment.paidAt = new Date();
-    payment.failureReason = null;
+    const succeededPayment = await Payment.findOneAndUpdate(
+        {
+            _id: payment._id,
+            status: 'PROCESSING',
+            providerOrderId: razorpayOrderId,
+        },
+        {
+            $set: {
+                status: 'SUCCEEDED',
+                providerPaymentId: razorpayPaymentId,
+                paidAt: new Date(),
+                failureReason: null,
+            },
+            $unset: { activeInvoice: 1, orderCreationStartedAt: 1 },
+        },
+        { new: true }
+    );
 
-    await payment.save();
+    if (succeededPayment) {
+        return succeededPayment;
+    }
 
-    return payment;
+    const currentPayment = await Payment.findById(payment._id);
+    if (currentPayment?.status === 'SUCCEEDED') {
+        return currentPayment;
+    }
+
+    const error = new Error('Payment could not be finalized');
+    error.statusCode = 409;
+    throw error;
 };

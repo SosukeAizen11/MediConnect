@@ -176,6 +176,53 @@ function Appointments() {
                                         {appt.status}
                                     </span>
                                 </div>
+                                {appt.status === 'COMPLETED' && appt.invoice && (
+                                <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-gray-600">
+                                            Consultation Bill
+                                        </span>
+
+                                        <span className="text-sm font-semibold text-gray-800">
+                                            ₹{(appt.invoice.totalAmount / 100).toFixed(2)}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between mt-2">
+                                        <span className="text-sm text-gray-600">
+                                            Payment
+                                        </span>
+
+                                        <span
+                                            className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                                                appt.invoice.status === 'PAID'
+                                                    ? 'bg-green-50 text-green-700'
+                                                    : appt.invoice.status === 'PARTIALLY_PAID'
+                                                        ? 'bg-yellow-50 text-yellow-700'
+                                                        : 'bg-orange-50 text-orange-700'
+                                            }`}
+                                        >
+                                            {appt.invoice.status === 'PAID'
+                                                ? 'PAID'
+                                                : appt.invoice.status === 'PARTIALLY_PAID'
+                                                    ? 'PARTIALLY PAID'
+                                                    : 'PENDING'}
+                                        </span>
+                                    </div>
+
+                                    {appt.invoice.amountDue > 0 && (
+                                        <div className="flex items-center justify-between mt-2">
+                                            <span className="text-xs text-gray-500">
+                                                Amount Due
+                                            </span>
+
+                                            <span className="text-xs font-semibold text-gray-700">
+                                                ₹{(appt.invoice.amountDue / 100).toFixed(2)}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             </div>
                         </div>
 

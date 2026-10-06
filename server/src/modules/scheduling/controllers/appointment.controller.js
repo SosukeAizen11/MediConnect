@@ -7,6 +7,10 @@ import {
 } from '../services/appointment.service.js';
 
 import {
+    getInvoiceStatusesByAppointmentIds,
+} from '../../billing/index.js';
+
+import {
     completeConsultation as completeConsultationService,
     getPrescriptionUrlsForAppointments,
     getConsultationByAppointmentId,
@@ -79,14 +83,59 @@ export const getPatientAppointments = async (req, res, next) => {
 
 export const getDoctorAppointments = async (req, res, next) => {
     try {
-        const doctorDoc = await getOrCreateDoctorProfile(req.user._id || req.user.id);
+        const doctorDoc = await getOrCreateDoctorProfile(
+            req.user._id || req.user.id
+        );
 
         const appointments =
             await getDoctorAppointmentsService(doctorDoc._id);
 
+        if (!appointments || appointments.length === 0) {
+            return res.status(200).json({
+                success: true,
+                appointments: [],
+            });
+        }
+
+        /*
+         * Scheduling owns the appointment list.
+         * Billing owns invoice/payment status.
+         *
+         * We compose the two read models here at the
+         * application/HTTP boundary.
+         */
+        const appointmentIds = appointments.map(
+            (appointment) => appointment._id
+        );
+
+        const invoices =
+            await getInvoiceStatusesByAppointmentIds(appointmentIds);
+
+        const invoiceMap = new Map(
+            invoices.map((invoice) => [
+                invoice.appointment.toString(),
+                invoice,
+            ])
+        );
+
+        const enrichedAppointments = appointments.map((appointment) => {
+            const appointmentObject = appointment.toObject
+                ? appointment.toObject()
+                : { ...appointment };
+
+            const invoice = invoiceMap.get(
+                appointment._id.toString()
+            );
+
+            return {
+                ...appointmentObject,
+                invoice: invoice || null,
+            };
+        });
+
         res.status(200).json({
             success: true,
-            appointments,
+            appointments: enrichedAppointments,
         });
     } catch (error) {
         next(error);

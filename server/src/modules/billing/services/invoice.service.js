@@ -139,53 +139,113 @@ export const getInvoiceById = async (invoiceId) => {
     return Invoice.findById(invoiceId);
 };
 
-export const recordPaymentSuccess = async ({ invoiceId, amount }) => {
+export const recordPaymentSuccess = async ({ invoiceId, paymentId, amount }) => {
     if (!invoiceId) {
         throw new Error('Invoice ID is required');
+    }
+
+    if (!paymentId) {
+        throw new Error('Payment ID is required');
     }
 
     if (!Number.isInteger(amount) || amount <= 0) {
         throw new Error('Payment amount must be a positive integer in paise');
     }
 
-    const invoice = await Invoice.findById(invoiceId);
+    const appliedPaymentId = new mongoose.Types.ObjectId(paymentId);
 
-    if (!invoice) {
-        const error = new Error('Invoice not found');
-        error.statusCode = 404;
-        throw error;
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+        const updatedInvoice = await Invoice.findOneAndUpdate(
+            {
+                _id: invoiceId,
+                status: { $ne: 'CANCELLED' },
+                amountDue: { $gte: amount },
+                appliedPaymentIds: { $ne: appliedPaymentId },
+            },
+            [
+                {
+                    $set: {
+                        amountDue: { $subtract: ['$amountDue', amount] },
+                        appliedPaymentIds: {
+                            $setUnion: [
+                                { $ifNull: ['$appliedPaymentIds', []] },
+                                [{ $literal: appliedPaymentId }],
+                            ],
+                        },
+                        status: {
+                            $cond: [
+                                {
+                                    $eq: [
+                                        { $subtract: ['$amountDue', amount] },
+                                        0,
+                                    ],
+                                },
+                                'PAID',
+                                'PARTIALLY_PAID',
+                            ],
+                        },
+                        paidAt: {
+                            $cond: [
+                                {
+                                    $eq: [
+                                        { $subtract: ['$amountDue', amount] },
+                                        0,
+                                    ],
+                                },
+                                '$$NOW',
+                                { $ifNull: ['$paidAt', null] },
+                            ],
+                        },
+                    },
+                },
+            ],
+            { new: true }
+        );
+
+        if (updatedInvoice) {
+            return updatedInvoice;
+        }
+
+        const invoice = await Invoice.findById(invoiceId).select(
+            '+appliedPaymentIds'
+        );
+
+        if (!invoice) {
+            const error = new Error('Invoice not found');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        if (invoice.appliedPaymentIds?.some((id) => id.equals(appliedPaymentId))) {
+            return invoice;
+        }
+
+        if (invoice.status === 'CANCELLED') {
+            const error = new Error('Cannot apply payment to a cancelled invoice');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        if (amount > invoice.amountDue) {
+            const error = new Error('Payment amount exceeds invoice amount due');
+            error.statusCode = 400;
+            throw error;
+        }
     }
 
-    if (invoice.status === 'CANCELLED') {
-        const error = new Error('Cannot apply payment to a cancelled invoice');
-        error.statusCode = 400;
-        throw error;
+    const error = new Error('Invoice changed during payment application');
+    error.statusCode = 409;
+    throw error;
+};
+
+export const getInvoiceStatusesByAppointmentIds = async (appointmentIds) => {
+    if (!Array.isArray(appointmentIds) || appointmentIds.length === 0) {
+        return [];
     }
 
-    /*
-     * If this payment has already been applied,
-     * don't subtract the amount again.
-     */
-    if (invoice.amountDue === 0) {
-        return invoice;
-    }
-
-    if (amount > invoice.amountDue) {
-        const error = new Error('Payment amount exceeds invoice amount due');
-        error.statusCode = 400;
-        throw error;
-    }
-
-    invoice.amountDue -= amount;
-
-    if (invoice.amountDue === 0) {
-        invoice.status = 'PAID';
-        invoice.paidAt = new Date();
-    } else {
-        invoice.status = 'PARTIALLY_PAID';
-    }
-
-    await invoice.save();
-
-    return invoice;
+    return Invoice.find({
+        appointment: { $in: appointmentIds },
+    })
+        .select('appointment totalAmount amountDue status paidAt')
+        .lean();
 };
